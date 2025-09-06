@@ -3,9 +3,9 @@ import './globals.css';
 import { Analytics } from '@vercel/analytics/react';
 
 export const metadata = {
-  title: 'Next.js App Router + NextAuth + Tailwind CSS',
+  title: 'Panadería Santa Anita',
   description:
-    'A user admin dashboard configured with Next.js, Postgres, NextAuth, Tailwind CSS, TypeScript, and Prettier.'
+    'Sistema de gestión para la Panadería Santa Anita',
 };
 
 export default function RootLayout({
@@ -20,3 +20,4 @@ export default function RootLayout({
     </html>
   );
 }
+
