@@ -4,11 +4,6 @@ import { Button } from '@/components/ui/button';
 import { ProductsTable } from './products-table';
 import { getProducts } from '@/lib/db';
 
-export default function Page() {
-    return <p>Devoluciones Page</p>;
-}
-
-/*
 export default async function ProductsPage(
   props: {
     searchParams: Promise<{ q: string; offset: string }>;
@@ -56,6 +51,5 @@ export default async function ProductsPage(
         />
       </TabsContent>
     </Tabs>
-  );
+  ); 
 }
-*/
