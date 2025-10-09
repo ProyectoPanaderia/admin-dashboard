@@ -10,8 +10,8 @@ export default function CustomersPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Customers</CardTitle>
-        <CardDescription>View all customers and their orders.</CardDescription>
+        <CardTitle>Clientes</CardTitle>
+        <CardDescription>Ver todos los clientes y sus pedidos.</CardDescription>
       </CardHeader>
       <CardContent></CardContent>
     </Card>

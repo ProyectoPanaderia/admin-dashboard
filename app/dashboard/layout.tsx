@@ -60,46 +60,59 @@ function DesktopNav() {
   return (
     <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
       <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
+        {/* Logo */}
         <Link
-          href="https://vercel.com/templates/next.js/admin-dashboard-tailwind-postgres-react-nextjs"
-          className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
+          href="/dashboard"
+          className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 
+                     rounded-full bg-primary text-lg font-semibold text-primary-foreground 
+                     md:h-8 md:w-8 md:text-base"
         >
           <VercelLogo className="h-3 w-3 transition-all group-hover:scale-110" />
-          <span className="sr-only">Acme Inc</span>
+          <span className="sr-only">Inicio</span>
         </Link>
 
-        <NavItem href="#" label="Inicio">
+        <NavItem href="/dashboard" label="Inicio">
           <Home className="h-5 w-5" />
         </NavItem>
 
-        <NavItem href="#" label="Pedidos">
-          <ShoppingCart className="h-5 w-5" />
-        </NavItem>
-
-        <NavItem href="/" label="Productos">
+        <NavItem href="/dashboard/productos" label="Productos">
           <Package className="h-5 w-5" />
         </NavItem>
 
-        <NavItem href="/customers" label="Clientes">
+        <NavItem href="/dashboard/clientes" label="Clientes">
           <Users2 className="h-5 w-5" />
         </NavItem>
 
-        <NavItem href="#" label="Métricas">
+        {/* Pedidos */}
+        {/*
+        <NavItem href="/dashboard/pedidos" label="Pedidos">
+          <ShoppingCart className="h-5 w-5" />
+        </NavItem>
+        */}
+
+        {/* Métricas (comentado temporalmente) */}
+        {/*
+        <NavItem href="/dashboard/metricas" label="Métricas">
           <LineChart className="h-5 w-5" />
         </NavItem>
+        */}
       </nav>
+
+      {/* Footer de navegación */}
       <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
         <Tooltip>
           <TooltipTrigger asChild>
             <Link
-              href="#"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
+              href="/dashboard/configuracion"
+              className="flex h-9 w-9 items-center justify-center rounded-lg 
+                         text-muted-foreground transition-colors hover:text-foreground 
+                         md:h-8 md:w-8"
             >
               <Settings className="h-5 w-5" />
-              <span className="sr-only">Settings</span>
+              <span className="sr-only">Configuración</span>
             </Link>
           </TooltipTrigger>
-          <TooltipContent side="right">Settings</TooltipContent>
+          <TooltipContent side="right">Configuración</TooltipContent>
         </Tooltip>
       </nav>
     </aside>
@@ -129,35 +142,35 @@ function MobileNav() {
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
             <Home className="h-5 w-5" />
-            Dashboard
+            Inicio
           </Link>
           <Link
             href="#"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
             <ShoppingCart className="h-5 w-5" />
-            Orders
+            Pedidos
           </Link>
           <Link
             href="#"
             className="flex items-center gap-4 px-2.5 text-foreground"
           >
             <Package className="h-5 w-5" />
-            Products
+            Productos
           </Link>
           <Link
             href="#"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
             <Users2 className="h-5 w-5" />
-            Customers
+            Clientes
           </Link>
           <Link
             href="#"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
             <LineChart className="h-5 w-5" />
-            Settings
+            Configuración
           </Link>
         </nav>
       </SheetContent>
@@ -171,18 +184,18 @@ function DashboardBreadcrumb() {
       <BreadcrumbList>
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <Link href="#">Dashboard</Link>
+            <Link href="#">Inicio</Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <Link href="#">Products</Link>
+            <Link href="#">Stock en camión</Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
-          <BreadcrumbPage>All Products</BreadcrumbPage>
+          <BreadcrumbPage>Realizar venta</BreadcrumbPage>
         </BreadcrumbItem>
       </BreadcrumbList>
     </Breadcrumb>
