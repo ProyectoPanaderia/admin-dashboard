@@ -6,10 +6,8 @@ import {
   Package2,
   PanelLeft,
   Settings,
-  ShoppingCart,
   Users2
 } from 'lucide-react';
-
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -19,7 +17,7 @@ import {
   BreadcrumbSeparator
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import {
   Tooltip,
   TooltipContent,
@@ -30,7 +28,31 @@ import { VercelLogo } from '@/components/icons';
 import Providers from './providers';
 import { NavItem } from './nav-item';
 import { SearchInput } from './search';
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
+function DashboardBreadcrumb() {
+  return (
+    <Breadcrumb className="hidden md:flex">
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbLink asChild>
+            <Link href="/dashboard">Inicio</Link>
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbLink asChild>
+            <Link href="#">Gestión</Link>
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbPage>Panel</BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  );
+}
 export default function DashboardLayout({
   children
 }: {
@@ -55,7 +77,6 @@ export default function DashboardLayout({
     </Providers>
   );
 }
-
 function DesktopNav() {
   return (
     <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
@@ -82,20 +103,6 @@ function DesktopNav() {
         <NavItem href="/dashboard/clientes" label="Clientes">
           <Users2 className="h-5 w-5" />
         </NavItem>
-
-        {/* Pedidos */}
-        {/*
-        <NavItem href="/dashboard/pedidos" label="Pedidos">
-          <ShoppingCart className="h-5 w-5" />
-        </NavItem>
-        */}
-
-        {/* Métricas (comentado temporalmente) */}
-        {/*
-        <NavItem href="/dashboard/metricas" label="Métricas">
-          <LineChart className="h-5 w-5" />
-        </NavItem>
-        */}
       </nav>
 
       {/* Footer de navegación */}
@@ -118,86 +125,77 @@ function DesktopNav() {
     </aside>
   );
 }
-
 function MobileNav() {
   return (
     <Sheet>
       <SheetTrigger asChild>
         <Button size="icon" variant="outline" className="sm:hidden">
           <PanelLeft className="h-5 w-5" />
-          <span className="sr-only">Toggle Menu</span>
+          <span className="sr-only">Abrir menú</span>
         </Button>
       </SheetTrigger>
+
       <SheetContent side="left" className="sm:max-w-xs">
+        <VisuallyHidden>
+          <h2>Menú de navegación</h2>
+        </VisuallyHidden>
+
         <nav className="grid gap-6 text-lg font-medium">
-          <Link
-            href="#"
-            className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
-          >
-            <Package2 className="h-5 w-5 transition-all group-hover:scale-110" />
-            <span className="sr-only">Vercel</span>
-          </Link>
-          <Link
-            href="#"
-            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-          >
-            <Home className="h-5 w-5" />
-            Inicio
-          </Link>
-          <Link
-            href="#"
-            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-          >
-            <ShoppingCart className="h-5 w-5" />
-            Pedidos
-          </Link>
-          <Link
-            href="#"
-            className="flex items-center gap-4 px-2.5 text-foreground"
-          >
-            <Package className="h-5 w-5" />
-            Productos
-          </Link>
-          <Link
-            href="#"
-            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-          >
-            <Users2 className="h-5 w-5" />
-            Clientes
-          </Link>
-          <Link
-            href="#"
-            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-          >
-            <LineChart className="h-5 w-5" />
-            Configuración
-          </Link>
+          {/* Logo */}
+          <SheetClose asChild>
+            <Link
+              href="/dashboard"
+              className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 
+                         rounded-full bg-primary text-lg font-semibold text-primary-foreground 
+                         md:text-base"
+            >
+              <Package2 className="h-5 w-5 transition-all group-hover:scale-110" />
+              <span className="sr-only">Inicio</span>
+            </Link>
+          </SheetClose>
+
+          {/* Enlaces */}
+          <SheetClose asChild>
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+            >
+              <Home className="h-5 w-5" />
+              Inicio
+            </Link>
+          </SheetClose>
+
+          <SheetClose asChild>
+            <Link
+              href="/dashboard/productos"
+              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+            >
+              <Package className="h-5 w-5" />
+              Productos
+            </Link>
+          </SheetClose>
+
+          <SheetClose asChild>
+            <Link
+              href="/dashboard/clientes"
+              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+            >
+              <Users2 className="h-5 w-5" />
+              Clientes
+            </Link>
+          </SheetClose>
+
+          <SheetClose asChild>
+            <Link
+              href="/dashboard/admin"
+              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+            >
+              <LineChart className="h-5 w-5" />
+              Administración
+            </Link>
+          </SheetClose>
         </nav>
       </SheetContent>
     </Sheet>
-  );
-}
-
-function DashboardBreadcrumb() {
-  return (
-    <Breadcrumb className="hidden md:flex">
-      <BreadcrumbList>
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link href="#">Inicio</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link href="#">Stock en camión</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbPage>Realizar venta</BreadcrumbPage>
-        </BreadcrumbItem>
-      </BreadcrumbList>
-    </Breadcrumb>
   );
 }
