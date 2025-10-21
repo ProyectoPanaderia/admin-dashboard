@@ -1,7 +1,0 @@
-{
-  "productos": [
-    { "id": 1, "nombre": "Pan francés", "peso": 500 },
-    { "id": 2, "nombre": "Facturas surtidas", "peso": 250 },
-    { "id": 3, "nombre": "Medialunas", "peso": 300 }
-  ]
-}

@@ -13,12 +13,14 @@ export default async function ProductsPage() {
 
   if (!res.ok) {
     console.error('Error al obtener productos:', res.status, res.statusText);
+    const errorText = await res.text();
+    console.error('Respuesta del servidor:', errorText);
     return <p className="p-4 text-red-500">Error al obtener los productos</p>;
   }
 
-  // EN BASE A LO QUE DEVUELVE AL BACKEND { productos: [...] } desestructuramos:
+  // formato del backend { data: [...], meta: {...} }
   const data = await res.json();
-  const productos = Array.isArray(data) ? data : data.productos;
+  const productos = data?.data ?? [];
 
   // renderizado
   return (
@@ -31,6 +33,7 @@ export default async function ProductsPage() {
           <NuevoProductoButton />
         </div>
       </div>
+
       <ProductsTable products={productos} />
     </div>
   );

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,16 +16,32 @@ import {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
-export default function NuevoProductoPage() {
+export default function EditarProductoPage() {
+  const router = useRouter();
+  const params = useParams();
+  const id = params?.id;
+
   const [nombre, setNombre] = useState('');
   const [peso, setPeso] = useState('');
-  const router = useRouter();
+
+  useEffect(() => {
+    if (!id) return;
+
+    fetch(`${API_BASE_URL}/productos/${id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        const producto = data.data;
+        setNombre(producto.nombre);
+        setPeso(producto.peso.toString());
+      })
+      .catch((err) => console.error('Error al obtener producto:', err));
+  }, [id]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    const res = await fetch(`${API_BASE_URL}/productos`, {
-      method: 'POST',
+    const res = await fetch(`${API_BASE_URL}/productos/${id}`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nombre, peso: parseInt(peso, 10) }),
     });
@@ -34,7 +50,7 @@ export default function NuevoProductoPage() {
       router.push('/dashboard/productos');
       router.refresh();
     } else {
-      alert('Error al crear el producto');
+      alert('Error al actualizar el producto');
     }
   }
 
@@ -42,8 +58,8 @@ export default function NuevoProductoPage() {
     <div className="flex justify-center items-center min-h-screen p-8 bg-muted/10">
       <Card className="w-full max-w-md shadow-md">
         <CardHeader>
-          <CardTitle>Nuevo producto</CardTitle>
-          <CardDescription>Completá los datos para registrar un nuevo producto.</CardDescription>
+          <CardTitle>Editar producto</CardTitle>
+          <CardDescription>Actualizá los datos del producto seleccionado.</CardDescription>
         </CardHeader>
 
         <CardContent>
@@ -68,14 +84,10 @@ export default function NuevoProductoPage() {
               />
             </div>
             <CardFooter className="flex justify-end gap-2 p-0 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.push('/dashboard/productos')}
-              >
+              <Button type="button" variant="outline" onClick={() => router.push('/dashboard/productos')}>
                 Cancelar
               </Button>
-              <Button type="submit">Guardar</Button>
+              <Button type="submit">Guardar cambios</Button>
             </CardFooter>
           </form>
         </CardContent>
