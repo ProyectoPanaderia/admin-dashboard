@@ -6,7 +6,8 @@ import {
   Package2,
   PanelLeft,
   Settings,
-  Users2
+  Users2,
+  Building2 // 🏙️ ícono para ciudades
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -53,6 +54,7 @@ function DashboardBreadcrumb() {
     </Breadcrumb>
   );
 }
+
 export default function DashboardLayout({
   children
 }: {
@@ -77,6 +79,7 @@ export default function DashboardLayout({
     </Providers>
   );
 }
+
 function DesktopNav() {
   return (
     <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
@@ -103,6 +106,11 @@ function DesktopNav() {
         <NavItem href="/dashboard/clientes" label="Clientes">
           <Users2 className="h-5 w-5" />
         </NavItem>
+
+        {/* 🏙️ Nueva sección de Ciudades */}
+        <NavItem href="/dashboard/ciudades" label="Ciudades">
+          <Building2 className="h-5 w-5" />
+        </NavItem>
       </nav>
 
       {/* Footer de navegación */}
@@ -125,6 +133,7 @@ function DesktopNav() {
     </aside>
   );
 }
+
 function MobileNav() {
   return (
     <Sheet>
@@ -182,6 +191,17 @@ function MobileNav() {
             >
               <Users2 className="h-5 w-5" />
               Clientes
+            </Link>
+          </SheetClose>
+
+          {/* 🏙️ Nueva opción de Ciudades */}
+          <SheetClose asChild>
+            <Link
+              href="/dashboard/ciudades"
+              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+            >
+              <Building2 className="h-5 w-5" />
+              Ciudades
             </Link>
           </SheetClose>
 
