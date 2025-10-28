@@ -1,6 +1,19 @@
 'use client';
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableHead,
+  TableRow,
+  TableHeader,
+  TableBody
+} from '@/components/ui/table';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
 import { Ciudad } from './ciudad';
 
 interface CiudadType {
@@ -10,20 +23,44 @@ interface CiudadType {
 
 export function CiudadesTable({ ciudades }: { ciudades: CiudadType[] }) {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>ID</TableHead>
-          <TableHead>Nombre</TableHead>
-          <TableHead>Acciones</TableHead>
-        </TableRow>
-      </TableHeader>
+    <Card>
+      <CardHeader>
+        <CardTitle>Lista de ciudades</CardTitle>
+        <CardDescription>
+          Gestioná las ciudades disponibles para asignar a los clientes.
+        </CardDescription>
+      </CardHeader>
 
-      <TableBody>
-        {ciudades.map((ciudad) => (
-          <Ciudad key={ciudad.id} ciudad={ciudad} />
-        ))}
-      </TableBody>
-    </Table>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>Nombre</TableHead>
+              <TableHead>
+                <span className="sr-only">Acciones</span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {ciudades.length > 0 ? (
+              ciudades.map((ciudad) => (
+                <Ciudad key={ciudad.id} ciudad={ciudad} />
+              ))
+            ) : (
+              <TableRow>
+                <TableHead
+                  colSpan={3}
+                  className="text-center text-gray-500 py-4"
+                >
+                  No hay ciudades registradas.
+                </TableHead>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }
