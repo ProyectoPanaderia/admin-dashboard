@@ -1,30 +1,43 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { MoreHorizontal } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { Pencil, Trash2 } from 'lucide-react';
 
 interface CiudadType {
   id: number;
   nombre: string;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
 export function Ciudad({ ciudad }: { ciudad: CiudadType }) {
   const router = useRouter();
 
   async function handleDelete() {
-    if (!confirm(`¿Eliminar la ciudad "${ciudad.nombre}"?`)) return;
+    const confirmar = window.confirm(
+      `¿Seguro que querés eliminar la ciudad "${ciudad.nombre}"?`
+    );
+    if (!confirmar) return;
 
-    const res = await fetch(`${API_BASE_URL}/ciudades/${ciudad.id}`, { method: 'DELETE' });
+    try {
+      const res = await fetch(`${API_BASE_URL}/ciudades/${ciudad.id}`, {
+        method: 'DELETE',
+      });
 
-    if (res.ok) {
-      router.refresh();
-    } else {
-      alert('Error al eliminar la ciudad');
+      if (res.ok) {
+        alert('✅ Ciudad eliminada correctamente');
+        router.refresh();
+      } else {
+        const msg = await res.text();
+        console.error('Error al eliminar ciudad:', msg);
+        alert('⚠️ No se pudo eliminar la ciudad');
+      }
+    } catch (error) {
+      console.error('Error al conectar con backend:', error);
+      alert('❌ Error de conexión con el servidor');
     }
   }
 
@@ -32,23 +45,28 @@ export function Ciudad({ ciudad }: { ciudad: CiudadType }) {
     <TableRow>
       <TableCell>{ciudad.id}</TableCell>
       <TableCell>{ciudad.nombre}</TableCell>
-      <TableCell>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="icon" variant="ghost">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => router.push(`/dashboard/ciudades/${ciudad.id}/editar`)}>
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleDelete} className="text-red-600">
-              Eliminar
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              router.push(`/dashboard/ciudades/${ciudad.id}/editar`)
+            }
+          >
+            <Pencil className="h-4 w-4 mr-1" />
+            Editar
+          </Button>
+
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDelete}
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            Eliminar
+          </Button>
+        </div>
       </TableCell>
     </TableRow>
   );

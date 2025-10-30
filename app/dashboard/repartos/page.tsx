@@ -1,0 +1,39 @@
+import { RepartosTable } from './repartos-table';
+import { NuevoRepartoButton } from './nuevo-reparto-button';
+
+// URL base del backend
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+
+export default async function RepartosPage() {
+  // llamada al backend
+  const res = await fetch(`${API_BASE_URL}/repartos`, {
+    cache: 'no-store',
+  });
+
+  if (!res.ok) {
+    console.error('Error al obtener repartos:', res.status, res.statusText);
+    const errorText = await res.text();
+    console.error('Respuesta del servidor:', errorText);
+    return <p className="p-4 text-red-500">Error al obtener los repartos</p>;
+  }
+
+  // formato del backend { data: [...], meta: {...} }
+  const data = await res.json();
+  const repartos = data?.data ?? [];
+
+  // renderizado
+  return (
+    <div className="p-6">
+      <div className="flex items-center mb-4">
+        <h1 className="text-2xl font-semibold">Repartos</h1>
+
+        <div className="ml-auto flex items-center gap-2">
+          <NuevoRepartoButton />
+        </div>
+      </div>
+
+      <RepartosTable repartos={repartos} />
+    </div>
+  );
+}
