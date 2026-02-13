@@ -71,6 +71,10 @@ function DesktopNav() {
         <NavItem href="/dashboard/existencias" label="Existencias">
           <LineChart className="h-5 w-5" />
         </NavItem>
+
+        <NavItem href="/dashboard/pedidos" label="Pedidos">
+          <LineChart className="h-5 w-5" />
+        </NavItem>
       </nav>
     </aside>
   );
@@ -137,6 +141,16 @@ export function MobileNav() {
               >
               <LineChart className="h-5 w-5" />
               Existencias
+            </Link>
+          </SheetClose>
+
+          <SheetClose asChild>
+            <Link
+              href="/dashboard/pedidos"
+              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+              >
+              <LineChart className="h-5 w-5" />
+              Pedidos
             </Link>
           </SheetClose>
           
