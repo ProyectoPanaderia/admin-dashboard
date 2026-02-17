@@ -16,7 +16,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/a
 interface LineaForm {
   tempId: number; // ID temporal para React Keys
   productoId: string;
-  descripcion: string; // Snapshot del nombre
+  descripcion: string;
   cantidad: number;
   precioUnitario: number;
   subtotal: number;
@@ -27,9 +27,9 @@ export default function NuevoPedidoPage() {
   const [loading, setLoading] = useState(false);
 
   // --- Datos Maestros ---
-  const [clientes, setClientes] = useState<{id: number, nombre: string, apellido: string}[]>([]);
+  const [clientes, setClientes] = useState<{id: number, nombre: string}[]>([]);
   const [repartos, setRepartos] = useState<{id: number, nombre: string}[]>([]);
-  const [productos, setProductos] = useState<{id: number, nombre: string, precio?: number}[]>([]);
+  const [productos, setProductos] = useState<{id: number, nombre: string}[]>([]);
 
   // --- Estado Cabecera ---
   const [clienteId, setClienteId] = useState('');
@@ -96,8 +96,8 @@ export default function NuevoPedidoPage() {
       if (field === 'productoId') {
         const prod = productos.find(p => p.id.toString() === value);
         if (prod) {
-          updatedLinea.descripcion = prod.nombre; // Snapshot nombre
-          updatedLinea.precioUnitario = prod.precio || 0; // Snapshot precio (si tu backend trae precio)
+          updatedLinea.descripcion = prod.nombre;
+          updatedLinea.precioUnitario = 0;
         }
       }
 
@@ -175,7 +175,7 @@ export default function NuevoPedidoPage() {
                 <SelectContent>
                   {clientes.map(c => (
                     <SelectItem key={c.id} value={c.id.toString()}>
-                      {c.nombre} {c.apellido}
+                      {c.nombre}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -221,7 +221,7 @@ export default function NuevoPedidoPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[300px]">Producto</TableHead>
-                  <TableHead className="w-[100px]">Precio U.</TableHead>
+                  <TableHead className="w-[100px]">Precio Unitario</TableHead>
                   <TableHead className="w-[100px]">Cantidad</TableHead>
                   <TableHead className="text-right">Subtotal</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
@@ -261,8 +261,7 @@ export default function NuevoPedidoPage() {
                         type="number" 
                         className="h-8 w-24"
                         value={linea.precioUnitario} 
-                        onChange={(e) => actualizarLinea(linea.tempId, 'precioUnitario', parseFloat(e.target.value))}
-                      />
+                        onChange={(e) => actualizarLinea(linea.tempId, 'precioUnitario', e.target.value)}                      />
                     </TableCell>
 
                     {/* Cantidad */}
@@ -272,8 +271,7 @@ export default function NuevoPedidoPage() {
                         className="h-8 w-20"
                         min="1"
                         value={linea.cantidad} 
-                        onChange={(e) => actualizarLinea(linea.tempId, 'cantidad', parseFloat(e.target.value))}
-                      />
+                        onChange={(e) => actualizarLinea(linea.tempId, 'cantidad', e.target.value)}                      />
                     </TableCell>
 
                     {/* Subtotal Calculado */}

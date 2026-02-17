@@ -5,7 +5,6 @@ import { PedidosTable } from './pedidos-table';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
-// Tipo para searchParams en Next.js 15+ (si usas 14 o anterior es directo)
 type SearchParamsProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
@@ -14,7 +13,6 @@ export default async function PedidosPage(props: SearchParamsProps) {
   const searchParams = await props.searchParams;
   const params = new URLSearchParams();
 
-  // Aquí mapeas tus filtros igual que en existencias (clienteId, fechas, etc.)
   if (searchParams.estado) params.append('estado', String(searchParams.estado));
 
   const res = await fetch(`${API_BASE_URL}/pedidos?${params.toString()}`, { 
@@ -33,8 +31,6 @@ export default async function PedidosPage(props: SearchParamsProps) {
           </Button>
         </Link>
       </div>
-
-      {/* Aquí iría el <PedidosFilter /> similar al de existencias */}
       
       <PedidosTable pedidos={pedidos} />
     </div>
