@@ -1,9 +1,9 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Home, LineChart, Package, PanelLeft, Users2, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { Analytics } from '@vercel/analytics/react';
-import { VercelLogo } from '@/components/icons';
 import Providers from './providers';
 import { NavItem } from './nav-item';
 import DashboardBreadcrumb from '@/components/DashboardBreadcumb';
@@ -19,7 +19,7 @@ export default function DashboardLayout({
     <Providers>
       <main className="flex min-h-screen w-full flex-col bg-muted/40">
         <DesktopNav />
-        <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
+        <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-16">
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
             <MobileNav />
             <DashboardBreadcrumb />
@@ -37,43 +37,45 @@ export default function DashboardLayout({
 
 function DesktopNav() {
   return (
-    <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
+    <aside className="fixed inset-y-0 left-0 z-10 hidden w-16 flex-col border-r bg-background sm:flex">
       <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
         {/* Logo */}
-        <Link
-          href="/dashboard"
-          className="group flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold"
-        >
-          <VercelLogo className="h-3 w-3 transition-all group-hover:scale-110" />
-          <span className="sr-only">Inicio</span>
-        </Link>
+        <div className="flex h-9 w-9 items-center justify-center">
+          <Image
+            src="/cuerno.png"
+            alt="Logo Panadería Santa Anita"
+            width={32}
+            height={32}
+            className="object-contain"
+          />
+        </div>
 
         <NavItem href="/dashboard" label="Inicio">
-          <Home className="h-5 w-5" />
+          <Image src="/hogar.png" alt="Inicio" width={20} height={20} className="object-contain" />
         </NavItem>
 
         <NavItem href="/dashboard/productos" label="Productos">
-          <Package className="h-5 w-5" />
+          <Image src="/caja-negra.png" alt="Productos" width={20} height={20} className="object-contain" />
         </NavItem>
 
         <NavItem href="/dashboard/clientes" label="Clientes">
-          <Users2 className="h-5 w-5" />
+          <Image src="/personas.png" alt="Clientes" width={20} height={20} className="object-contain" />
         </NavItem>
 
         <NavItem href="/dashboard/ciudades" label="Ciudades">
-          <Building2 className="h-5 w-5" />
+          <Image src="/edificio.png" alt="Ciudades" width={20} height={20} className="object-contain" />
         </NavItem>
 
         <NavItem href="/dashboard/repartos" label="Repartos">
-          <LineChart className="h-5 w-5" />
+          <Image src="/camion.png" alt="Repartos" width={20} height={20} className="object-contain" />
         </NavItem>
 
         <NavItem href="/dashboard/existencias" label="Existencias">
-          <LineChart className="h-5 w-5" />
+          <Image src="/existencias.png" alt="Existencias" width={20} height={20} className="object-contain" />
         </NavItem>
 
         <NavItem href="/dashboard/pedidos" label="Pedidos">
-          <LineChart className="h-5 w-5" />
+          <Image src="/entrega-de-pedidos.png" alt="Pedidos" width={20} height={20} className="object-contain" />
         </NavItem>
       </nav>
     </aside>
@@ -89,71 +91,53 @@ export function MobileNav() {
           <span className="sr-only">Abrir menú</span>
         </Button>
       </SheetTrigger>
-
       <SheetContent side="left" className="sm:max-w-xs">
         <VisuallyHidden>
           <DialogTitle>Menú de navegación</DialogTitle>
         </VisuallyHidden>
-
         <nav className="grid gap-6 text-lg font-medium mt-4">
           <SheetClose asChild>
             <Link href="/dashboard" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
-              <Home className="h-5 w-5" />
+              <Image src="/hogar.png" alt="Inicio" width={20} height={20} className="object-contain" />
               Inicio
             </Link>
           </SheetClose>
-
           <SheetClose asChild>
             <Link href="/dashboard/productos" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
-              <Package className="h-5 w-5" />
+              <Image src="/caja-negra.png" alt="Productos" width={20} height={20} className="object-contain" />
               Productos
             </Link>
           </SheetClose>
-
           <SheetClose asChild>
             <Link href="/dashboard/clientes" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
-              <Users2 className="h-5 w-5" />
+              <Image src="/personas.png" alt="Clientes" width={20} height={20} className="object-contain" />
               Clientes
             </Link>
           </SheetClose>
-
           <SheetClose asChild>
             <Link href="/dashboard/ciudades" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
-              <Building2 className="h-5 w-5" />
+              <Image src="/edificio.png" alt="Ciudades" width={20} height={20} className="object-contain" />
               Ciudades
             </Link>
           </SheetClose>
-
           <SheetClose asChild>
-            <Link
-              href="/dashboard/repartos"
-              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-              >
-              <LineChart className="h-5 w-5" />
+            <Link href="/dashboard/repartos" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
+              <Image src="/camion.png" alt="Repartos" width={20} height={20} className="object-contain" />
               Repartos
             </Link>
           </SheetClose>
-
           <SheetClose asChild>
-            <Link
-              href="/dashboard/existencias"
-              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-              >
-              <LineChart className="h-5 w-5" />
+            <Link href="/dashboard/existencias" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
+              <Image src="/existencias.png" alt="Existencias" width={20} height={20} className="object-contain" />
               Existencias
             </Link>
           </SheetClose>
-
           <SheetClose asChild>
-            <Link
-              href="/dashboard/pedidos"
-              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-              >
-              <LineChart className="h-5 w-5" />
+            <Link href="/dashboard/pedidos" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
+              <Image src="/entrega-de-pedidos.png" alt="Pedidos" width={20} height={20} className="object-contain" />
               Pedidos
             </Link>
           </SheetClose>
-          
         </nav>
       </SheetContent>
     </Sheet>
