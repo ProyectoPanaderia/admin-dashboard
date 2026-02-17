@@ -87,8 +87,13 @@ export function Pedido({ pedido }: Props) {
       {/* Acciones */}
       <TableCell className="text-right">
         <div className="flex justify-end gap-2">
-          {/* Ver Detalle (Placeholder) */}
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500">
+          {/* Ver Detalle */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+            onClick={() => router.push(`/dashboard/pedidos/${pedido.id}`)}
+          >
             <Eye className="h-4 w-4" />
           </Button>
           

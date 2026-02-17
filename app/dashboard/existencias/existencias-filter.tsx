@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { X, Filter } from 'lucide-react'; // Agregué Filter para decorar si querés
+import { X, Filter } from 'lucide-react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -43,8 +43,8 @@ export function ExistenciasFilter() {
   // Chequeamos si hay algún filtro activo para mostrar el botón X
   const hayFiltros = searchParams.get('productoId') || 
                      searchParams.get('repartoId') || 
-                     searchParams.get('fechaVencimiento') ||
-                     searchParams.get('fechaElaboracion');
+                     searchParams.get('fechaV') ||
+                     searchParams.get('fechaE');
 
   return (
     <div className="flex flex-wrap gap-4 mb-6 p-4 bg-white rounded-lg border shadow-sm items-end">
@@ -85,21 +85,21 @@ export function ExistenciasFilter() {
 
       {/* NUEVO: Filtro Elaboración */}
       <div className="w-[150px]">
-        <label className="text-sm font-medium mb-1 block">F. Elaboración</label>
+        <label className="text-sm font-medium mb-1 block">Fecha Elaboración</label>
         <Input 
           type="date" 
-          value={searchParams.get('fechaElaboracion') || ''}
-          onChange={(e) => handleFilterChange('fechaElaboracion', e.target.value)}
+          value={searchParams.get('fechaE') || ''}
+          onChange={(e) => handleFilterChange('fechaE', e.target.value)}
         />
       </div>
 
       {/* Filtro Vencimiento */}
       <div className="w-[150px]">
-        <label className="text-sm font-medium mb-1 block">F. Vencimiento</label>
+        <label className="text-sm font-medium mb-1 block">Fecha Vencimiento</label>
         <Input 
           type="date" 
-          value={searchParams.get('fechaVencimiento') || ''}
-          onChange={(e) => handleFilterChange('fechaVencimiento', e.target.value)}
+          value={searchParams.get('fechaV') || ''}
+          onChange={(e) => handleFilterChange('fechaV', e.target.value)}
         />
       </div>
 

@@ -141,7 +141,7 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
         const prod = productos.find(p => p.id.toString() === value);
         if (prod) {
           updatedLinea.descripcion = prod.nombre;
-          updatedLinea.precioUnitario = prod.precio || 0;
+          updatedLinea.precioUnitario = 0;
         }
       }
       updatedLinea.subtotal = updatedLinea.cantidad * updatedLinea.precioUnitario;
@@ -149,7 +149,7 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
     }));
   };
 
-  // --- GUARDADO (Lógica Compleja) ---
+  // --- GUARDADO
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -172,7 +172,7 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
 
       if (!resHead.ok) throw new Error('Error actualizando cabecera');
 
-      // 2. Procesar Líneas (Diffing)
+      // 2. Procesar Líneas
       const promesasLineas = [];
 
       // A) BORRADOS: Estaban en originales pero no en lineas actuales
@@ -190,7 +190,7 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
         if (!linea.productoId) continue;
 
         const payloadLinea = {
-            pedidoId: Number(id), // Importante para las nuevas
+            pedidoId: Number(id),
             productoId: Number(linea.productoId),
             cantidad: Number(linea.cantidad),
             precioUnitario: Number(linea.precioUnitario),
@@ -300,8 +300,8 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
               <TableHeader>
                 <TableRow>
                   <TableHead>Producto</TableHead>
-                  <TableHead className="w-[100px]">Precio</TableHead>
-                  <TableHead className="w-[100px]">Cant.</TableHead>
+                  <TableHead className="w-[100px]">Precio Unitario</TableHead>
+                  <TableHead className="w-[100px]">Cantidad</TableHead>
                   <TableHead className="text-right">Subtotal</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
@@ -324,15 +324,13 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
                         <Input 
                             type="number" className="h-8 w-24"
                             value={linea.precioUnitario} 
-                            onChange={(e) => actualizarLinea(linea.tempId, 'precioUnitario', parseFloat(e.target.value))}
-                        />
+                            onChange={(e) => actualizarLinea(linea.tempId, 'precioUnitario', e.target.value)}                        />
                     </TableCell>
                     <TableCell>
                         <Input 
                             type="number" className="h-8 w-20" min="1"
                             value={linea.cantidad} 
-                            onChange={(e) => actualizarLinea(linea.tempId, 'cantidad', parseFloat(e.target.value))}
-                        />
+                            onChange={(e) => actualizarLinea(linea.tempId, 'cantidad', e.target.value)}                        />
                     </TableCell>
                     <TableCell className="text-right font-medium">${linea.subtotal.toFixed(2)}</TableCell>
                     <TableCell>
