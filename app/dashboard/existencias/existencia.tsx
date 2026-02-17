@@ -24,11 +24,12 @@ const API_BASE_URL =
 export function Existencia({ existencia }: { existencia: ExistenciaType }) {
   const router = useRouter();
 
-  // Función para formatear fechas (YYYY-MM-DD o ISO a DD/MM/YYYY)
-  const formatDate = (dateStr: string) => {
+  // Función para formatear fechas manualmente
+const formatDate = (dateStr: string) => {
     if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    return isNaN(date.getTime()) ? dateStr : date.toLocaleDateString('es-AR');
+    const fechaLimpia = String(dateStr).split('T')[0]; 
+    const [anio, mes, dia] = fechaLimpia.split('-');
+    return `${dia}/${mes}/${anio}`;
   };
 
   async function handleDelete() {

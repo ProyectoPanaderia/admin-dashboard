@@ -23,12 +23,11 @@ export default async function ExistenciasPage(props: SearchParamsProps) {
     params.append('repartoId', String(searchParams.repartoId));
   }
   
-  // Usamos los nombres largos para coincidir con el backend
-  if (searchParams.fechaElaboracion) {
-    params.append('fechaElaboracion', String(searchParams.fechaElaboracion));
+  if (searchParams.fechaE) {
+    params.append('fechaE', String(searchParams.fechaE));
   }
-  if (searchParams.fechaVencimiento) {
-    params.append('fechaVencimiento', String(searchParams.fechaVencimiento));
+  if (searchParams.fechaV) {
+    params.append('fechaV', String(searchParams.fechaV));
   }
 
   // Fetch al backend

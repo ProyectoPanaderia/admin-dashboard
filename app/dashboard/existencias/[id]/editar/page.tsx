@@ -50,11 +50,13 @@ export default function EditarExistenciaPage() {
         setRepartoId(existencia.repartoId?.toString() || '');
         setCantidad(existencia.cantidad?.toString() || '');
         
-        // Formatear fechas para input type="date" (YYYY-MM-DD)
-        if (existencia.fechaE) 
-          setFechaE(existencia.fechaE.split('T')[0]);
-        if (existencia.fechaV) 
-          setFechaV(existencia.fechaV.split('T')[0]);
+        // Verificamos si existe antes de cortar el string. 
+        // Si es null o undefined, ponemos string vacío para el input.
+        const rawFechaE = existencia.fechaE;
+        const rawFechaV = existencia.fechaV;
+
+        setFechaE(rawFechaE ? String(rawFechaE).split('T')[0] : '');
+        setFechaV(rawFechaV ? String(rawFechaV).split('T')[0] : '');
 
       } catch (error) {
         console.error("Error cargando datos", error);
@@ -74,9 +76,11 @@ export default function EditarExistenciaPage() {
       productoId: Number(productoId),
       repartoId: Number(repartoId),
       cantidad: Number(cantidad),
-      fechaE,
-      fechaV
+      fechaE: fechaE || null, 
+      fechaV: fechaV || null,
     };
+
+    console.log("Enviando payload:", payload); // Para debugear
 
     try {
       const res = await fetch(`${API_BASE_URL}/existencias/${id}`, {
@@ -89,7 +93,9 @@ export default function EditarExistenciaPage() {
         router.push('/dashboard/existencias');
         router.refresh();
       } else {
-        alert('Error al actualizar');
+        const errorData = await res.json();
+        console.error("Error backend:", errorData);
+        alert(`Error al actualizar: ${errorData.message || 'Datos inválidos'}`);
       }
     } catch (error) {
       console.error(error);
@@ -139,11 +145,13 @@ export default function EditarExistenciaPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Fecha Elaboración</Label>
-                <Input type="date" value={fechaE} onChange={e => setFechaE(e.target.value)} />
+                <Input type="date" value={fechaE} onChange={e => setFechaE(e.target.value)} 
+                required/>
               </div>
               <div className="space-y-2">
                 <Label>Fecha Vencimiento</Label>
-                <Input type="date" value={fechaV} onChange={e => setFechaV(e.target.value)} />
+                <Input type="date" value={fechaV} onChange={e => setFechaV(e.target.value)} 
+                required/>
               </div>
             </div>
 
