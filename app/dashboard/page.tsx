@@ -1,13 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Search, FileText, DollarSign, ShoppingCart } from 'lucide-react';
-import { NuevoRemitoModal } from './nuevo-remito-modal'; // Asegurate de ajustar la ruta si lo pusiste en otra carpeta
+import { Plus, FileText, DollarSign, ShoppingCart } from 'lucide-react';
+import { NuevoRemitoModal } from './nuevo-remito-modal';
+import { RemitosFilter } from './remitos-filter';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -41,6 +40,7 @@ function formatMonto(total: number) {
 
 export default function DashboardPage() {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
 
   const [remitos, setRemitos] = useState<Remito[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,12 +48,7 @@ export default function DashboardPage() {
 
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
-  
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [tempDesde, setTempDesde] = useState('');
-  const [tempHasta, setTempHasta] = useState('');
 
-  // Estado para controlar el modal importado
   const [createOpen, setCreateOpen] = useState(false);
 
   const getAuthHeaders = () => ({
@@ -65,8 +60,22 @@ export default function DashboardPage() {
     if (!session?.user?.token) return;
     setLoading(true);
     setError('');
+    
     try {
-      const res = await fetch(`${API}/remitos?fechaDesde=${desde}&fechaHasta=${hasta}&pageSize=100`, { headers: getAuthHeaders() });
+      const params = new URLSearchParams();
+      params.append('fechaDesde', desde);
+      params.append('fechaHasta', hasta);
+      params.append('pageSize', '100');
+      
+      // Agregar filtros de la URL
+      if (searchParams.get('clienteId')) {
+        params.append('clienteId', searchParams.get('clienteId')!);
+      }
+      if (searchParams.get('repartoId')) {
+        params.append('repartoId', searchParams.get('repartoId')!);
+      }
+
+      const res = await fetch(`${API}/remitos?${params.toString()}`, { headers: getAuthHeaders() });
       const json = await res.json();
       setRemitos(Array.isArray(json) ? json : (json.data || []));
     } catch {
@@ -78,25 +87,20 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!session?.user?.token) return;
-    const desde = getFirstDayOfMonth();
-    const hasta = getToday();
+    
+    // Usar fechas de los filtros si existen, sino usar el mes actual
+    const desde = searchParams.get('fechaDesde') || getFirstDayOfMonth();
+    const hasta = searchParams.get('fechaHasta') || getToday();
+    
     setFechaDesde(desde);
     setFechaHasta(hasta);
-    setTempDesde(desde);
-    setTempHasta(hasta);
     
     fetchRemitos(desde, hasta);
-  }, [session?.user?.token]);
-
-  function aplicarFiltro() {
-    setFechaDesde(tempDesde);
-    setFechaHasta(tempHasta);
-    setFilterOpen(false);
-    fetchRemitos(tempDesde, tempHasta);
-  }
+  }, [session?.user?.token, searchParams]);
 
   const totalVentas = remitos.reduce((sum, r) => sum + r.total, 0);
   const cantidadRemitos = remitos.length;
+  
   let mesLabel = '';
   if (fechaDesde) {
     const fechaLimpia = String(fechaDesde).split('T')[0];
@@ -105,9 +109,9 @@ export default function DashboardPage() {
       'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
       'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
     ];
-    // Convertimos "02" a número, le restamos 1 para el índice, y nos da 'febrero'
     mesLabel = `${nombresMeses[parseInt(mes, 10) - 1]} de ${anio}`;
   }
+
   return (
     <section className="flex flex-col gap-6 p-2">
       
@@ -118,14 +122,14 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-500 capitalize mt-0.5">{mesLabel}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="flex items-center gap-2" onClick={() => { setTempDesde(fechaDesde); setTempHasta(fechaHasta); setFilterOpen(true); }}>
-            <Search className="h-4 w-4" /> Buscar por fecha
-          </Button>
           <Button className="flex items-center gap-2" onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4" /> Nuevo remito
           </Button>
         </div>
       </div>
+
+      {/* Filtros */}
+      <RemitosFilter />
 
       {/* Tarjetas de Resumen */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -182,22 +186,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Modal: Filtro de fechas */}
-      <Dialog open={filterOpen} onOpenChange={setFilterOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Buscar por fecha</DialogTitle></DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2"><Label>Desde</Label><Input type="date" value={tempDesde} onChange={(e) => setTempDesde(e.target.value)} /></div>
-            <div className="grid gap-2"><Label>Hasta</Label><Input type="date" value={tempHasta} onChange={(e) => setTempHasta(e.target.value)} /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setFilterOpen(false)}>Cancelar</Button>
-            <Button onClick={aplicarFiltro}>Buscar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Aca insertamos nuestro nuevo componente limpio */}
+      {/* Modal de Nuevo Remito */}
       <NuevoRemitoModal 
         open={createOpen} 
         onOpenChange={setCreateOpen} 
