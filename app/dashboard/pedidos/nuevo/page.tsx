@@ -13,9 +13,8 @@ import { useSession } from 'next-auth/react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
-// Interfaz local para manejar el estado del formulario de líneas
 interface LineaForm {
-  tempId: number; // ID temporal para React Keys
+  tempId: number; 
   productoId: string;
   descripcion: string;
   cantidad: number;
@@ -34,15 +33,16 @@ export default function NuevoPedidoPage() {
   const [productos, setProductos] = useState<{id: number, nombre: string}[]>([]);
 
   // --- Estado Cabecera ---
+  // ¡El orden acá es clave! Primero definimos los estados...
   const [clienteId, setClienteId] = useState('');
   const [repartoId, setRepartoId] = useState('');
   const [fechaEmision, setFechaEmision] = useState(new Date().toISOString().split('T')[0]);
-  const [fechaEntrega, setFechaEntrega] = useState(''); // Opcional: default mañana
+  const [fechaEntrega, setFechaEntrega] = useState(''); 
 
   // --- Estado Detalle (Líneas) ---
   const [lineas, setLineas] = useState<LineaForm[]>([]);
 
-  // --- Total Calculado (Frontend only para visualización) ---
+  // --- Total Calculado ---
   const totalEstimado = lineas.reduce((acc, curr) => acc + curr.subtotal, 0);
 
   // Cargar recursos al inicio
@@ -101,12 +101,11 @@ export default function NuevoPedidoPage() {
   }
 
   // --- Manejo de Líneas ---
-
   const agregarLinea = () => {
     setLineas([
       ...lineas,
       { 
-        tempId: Date.now(), // ID único temporal
+        tempId: Date.now(),
         productoId: '', 
         descripcion: '', 
         cantidad: 1, 
@@ -120,17 +119,14 @@ export default function NuevoPedidoPage() {
     setLineas(lineas.filter(l => l.tempId !== tempId));
   };
 
-  // 4. Corrección en la función de actualizarLinea
   const actualizarLinea = async (tempId: number, field: keyof LineaForm, value: any) => {
     let nuevoPrecio = 0;
     let nombreProd = '';
 
-    // Si cambia el producto, buscamos su precio ANTES de actualizar el estado
     if (field === 'productoId') {
       const prod = productos.find(p => p.id.toString() === value);
       if (prod) {
         nombreProd = prod.nombre;
-        // Buscamos el precio para la fecha de emisión seleccionada
         nuevoPrecio = await fetchPrecioVigente(prod.id, fechaEmision, 'reventa'); 
       }
     }
@@ -139,11 +135,9 @@ export default function NuevoPedidoPage() {
       return prevLineas.map(linea => {
         if (linea.tempId !== tempId) return linea;
 
-        // Creamos una copia de la línea y aplicamos el cambio
         const valFinal = (field === 'cantidad' || field === 'precioUnitario') ? Number(value) : value;
         const updatedLinea = { ...linea, [field]: valFinal };
 
-        // Lógica especial si cambia el producto
         if (field === 'productoId') {
           const prod = productos.find(p => p.id.toString() === value);
           if (prod) {
@@ -152,7 +146,6 @@ export default function NuevoPedidoPage() {
           }
         }
 
-        // Recalcular subtotal siempre
         updatedLinea.subtotal = updatedLinea.cantidad * updatedLinea.precioUnitario;
 
         return updatedLinea;
@@ -170,16 +163,23 @@ export default function NuevoPedidoPage() {
 
     setLoading(true);
 
+    // ... y recién acá, dentro del submit y usando los estados definidos, creamos las fechas seguras:
+    const fechaEmisionSegura = `${fechaEmision}T12:00:00.000Z`;
+    const fechaEntregaSegura = fechaEntrega ? `${fechaEntrega}T12:00:00.000Z` : null;
+
+    // Payload completo
     const payload = {
       clienteId: Number(clienteId),
       repartoId: Number(repartoId),
-      fechaEmision,
-      fechaEntrega,
+      fechaEmision: fechaEmisionSegura,
+      fechaEntrega: fechaEntregaSegura,
       estado: 'Pendiente',
+      total: totalEstimado, // ¡Importante para que cuadre en la BD!
       lineas: lineas.map(l => ({
         productoId: Number(l.productoId),
         cantidad: Number(l.cantidad),
         precioUnitario: Number(l.precioUnitario),
+        subtotal: Number(l.subtotal), // ¡Importante para el repositorio de líneas!
         descripcion: l.descripcion, 
       }))
     };
@@ -189,7 +189,7 @@ export default function NuevoPedidoPage() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.user?.token}` // ENVIAMOS TOKEN AL GUARDAR TAMBIÉN
+          'Authorization': `Bearer ${session?.user?.token}` 
         },
         body: JSON.stringify(payload),
       });
@@ -213,14 +213,12 @@ export default function NuevoPedidoPage() {
     <div className="flex justify-center min-h-screen p-6 bg-muted/10">
       <form onSubmit={handleSubmit} className="w-full max-w-4xl space-y-6">
         
-        {/* --- TARJETA CABECERA --- */}
         <Card>
           <CardHeader>
             <CardTitle>Nuevo Pedido</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
-            {/* Cliente */}
             <div className="space-y-2">
               <Label>Cliente</Label>
               <Select value={clienteId} onValueChange={setClienteId} required>
@@ -235,7 +233,6 @@ export default function NuevoPedidoPage() {
               </Select>
             </div>
 
-            {/* Reparto */}
             <div className="space-y-2">
               <Label>Reparto</Label>
               <Select value={repartoId} onValueChange={setRepartoId} required>
@@ -248,7 +245,6 @@ export default function NuevoPedidoPage() {
               </Select>
             </div>
 
-            {/* Fechas */}
             <div className="space-y-2">
               <Label>Fecha Emisión</Label>
               <Input type="date" value={fechaEmision} onChange={e => setFechaEmision(e.target.value)} required />
@@ -261,7 +257,6 @@ export default function NuevoPedidoPage() {
           </CardContent>
         </Card>
 
-        {/* --- TARJETA LÍNEAS (Productos) --- */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Productos</CardTitle>
@@ -290,8 +285,6 @@ export default function NuevoPedidoPage() {
                 )}
                 {lineas.map((linea) => (
                   <TableRow key={linea.tempId}>
-                    
-                    {/* Select Producto */}
                     <TableCell>
                       <Select 
                         value={linea.productoId} 
@@ -308,7 +301,6 @@ export default function NuevoPedidoPage() {
                       </Select>
                     </TableCell>
 
-                    {/* Precio Unitario (Editable o ReadOnly según prefieras) */}
                     <TableCell>
                       <Input 
                         type="number" 
@@ -317,7 +309,6 @@ export default function NuevoPedidoPage() {
                         onChange={(e) => actualizarLinea(linea.tempId, 'precioUnitario', e.target.value)}                      />
                     </TableCell>
 
-                    {/* Cantidad */}
                     <TableCell>
                       <Input 
                         type="number" 
@@ -327,12 +318,10 @@ export default function NuevoPedidoPage() {
                         onChange={(e) => actualizarLinea(linea.tempId, 'cantidad', e.target.value)}                      />
                     </TableCell>
 
-                    {/* Subtotal Calculado */}
                     <TableCell className="text-right font-medium">
                       ${linea.subtotal.toFixed(2)}
                     </TableCell>
 
-                    {/* Botón Eliminar */}
                     <TableCell>
                       <Button 
                         type="button" 
@@ -356,7 +345,6 @@ export default function NuevoPedidoPage() {
           </CardFooter>
         </Card>
 
-        {/* --- ACCIONES FINALES --- */}
         <div className="flex justify-end gap-4">
           <Button type="button" variant="outline" onClick={() => router.back()}>
             Cancelar
