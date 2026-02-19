@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { useSession } from 'next-auth/react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -14,6 +15,7 @@ export default function EditarExistenciaPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id;
+  const { data: session } = useSession();
 
   const [loading, setLoading] = useState(true);
   
@@ -30,11 +32,18 @@ export default function EditarExistenciaPage() {
 
   useEffect(() => {
     async function loadData() {
+      if (!session?.user?.token) return;
+
       try {
+        const headers = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.user.token}`
+        };
+        
         const [resProd, resRep, resEx] = await Promise.all([
-          fetch(`${API_BASE_URL}/productos`),
-          fetch(`${API_BASE_URL}/repartos`),
-          fetch(`${API_BASE_URL}/existencias/${id}`)
+          fetch(`${API_BASE_URL}/productos`, { headers }),
+          fetch(`${API_BASE_URL}/repartos`, { headers }),
+          fetch(`${API_BASE_URL}/existencias/${id}`, { headers })
         ]);
 
         const dProd = await resProd.json();
@@ -42,8 +51,11 @@ export default function EditarExistenciaPage() {
         const dEx = await resEx.json();
         const existencia = dEx.data || dEx;
 
-        setProductos(dProd.data || []);
-        setRepartos(dRep.data || []);
+        const listaProductos = Array.isArray(dProd) ? dProd : (dProd.data || []);
+        const listaRepartos = Array.isArray(dRep) ? dRep : (dRep.data || []);
+
+        setProductos(listaProductos);
+        setRepartos(listaRepartos);
 
         // Poblar formulario
         setProductoId(existencia.productoId?.toString() || '');
@@ -65,9 +77,11 @@ export default function EditarExistenciaPage() {
         setLoading(false);
       }
     }
-    
-    if (id) loadData();
-  }, [id]);
+
+    if (id && session?.user?.token) {
+      loadData()
+    };
+  }, [id, session?.user?.token]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,7 +99,9 @@ export default function EditarExistenciaPage() {
     try {
       const res = await fetch(`${API_BASE_URL}/existencias/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json',
+                   'Authorization': `Bearer ${session?.user?.token}`
+         },
         body: JSON.stringify(payload),
       });
 

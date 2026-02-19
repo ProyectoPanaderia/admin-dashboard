@@ -20,6 +20,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
+import { useSession } from 'next-auth/react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -32,18 +33,38 @@ export default function EditarRepartoPage() {
   const [estado, setEstado] = useState('A');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const { data: session } = useSession();
+
+useEffect(() => {
     async function fetchReparto() {
+      if (!session?.user?.token) return;
+
       try {
-        const res = await fetch(`${API_BASE_URL}/repartos/${id}`);
+        const res = await fetch(`${API_BASE_URL}/repartos/${id}`, {
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.user.token}` 
+          },
+        });
+        
         if (!res.ok) throw new Error('Error al obtener reparto');
 
         const data = await res.json();
-        const r = data.data || data;
+        
+        // --- EL BLINDAJE DEFINITIVO ---
+        // Si viene doblemente envuelto (data.data.data), o simple (data.data), o directo.
+        let r = data?.data?.data || data?.data || data;
+        
+        // Si por esas casualidades viene adentro de un array, sacamos el primer elemento
+        if (Array.isArray(r)) {
+          r = r[0];
+        }
 
-        setNombre(r.nombre ?? '');
-        setTercerizado(r.tercerizado ?? 'N');
-        setEstado(r.estado ?? 'A');
+        // Ahora sí, r es { id: 1, nombre: "Basavilbaso", tercerizado: "N", estado: "A" }
+        setNombre(r.nombre || '');
+        setTercerizado(r.tercerizado || 'N');
+        setEstado(r.estado || 'A');
+
       } catch (error) {
         console.error('⚠️ Error al cargar reparto:', error);
         alert('Error al cargar los datos del reparto');
@@ -52,8 +73,10 @@ export default function EditarRepartoPage() {
       }
     }
 
-    if (id) fetchReparto();
-  }, [id]);
+    if (id && session?.user?.token) {
+      fetchReparto();
+    }
+  }, [id, session?.user?.token]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -64,7 +87,9 @@ export default function EditarRepartoPage() {
     try {
       const res = await fetch(`${API_BASE_URL}/repartos/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Authorization': `Bearer ${session?.user.token}` },
         body: JSON.stringify(payload),
       });
 
@@ -72,9 +97,8 @@ export default function EditarRepartoPage() {
         router.push('/dashboard/repartos');
         router.refresh();
       } else {
-        const text = await res.text();
-        console.error('Error backend:', text);
-        alert('Error al actualizar el reparto');
+        const errorData = await res.json().catch(() => ({}));
+        alert('Error al actualizar el reparto: ' + (errorData.error || 'No autorizado'));
       }
     } catch (error) {
       console.error('Error al conectar con backend:', error);

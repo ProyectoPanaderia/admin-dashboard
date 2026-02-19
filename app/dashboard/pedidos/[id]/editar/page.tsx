@@ -9,26 +9,29 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Trash2, Plus, Save, ArrowLeft } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
 // Tipos locales
 interface LineaForm {
-  id?: number;       // ID real de la base de datos (si existe)
-  tempId: number;    // ID temporal para React (key)
+  id?: number;
+  tempId: number;
   productoId: string;
   descripcion: string;
   cantidad: number;
   precioUnitario: number;
   subtotal: number;
-  esNueva: boolean;  // Para saber si hacemos POST o PATCH
+  esNueva: boolean;
 }
 
 export default function EditarPedidoPage({ params }: { params: Promise<{ id: string }> }) {
-  // Desempaquetamos params (Next.js 15+)
-  const { id } = use(params);
+  // 1. REGLA DE REACT: Los hooks van ADENTRO del componente
+  const { data: session } = useSession();
   
+  const { id } = use(params);
   const router = useRouter();
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -46,32 +49,43 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
 
   // --- Estado Detalle (Líneas) ---
   const [lineas, setLineas] = useState<LineaForm[]>([]);
-  
-  // Guardamos los IDs originales para saber cuáles borrar
   const [lineasOriginalesIds, setLineasOriginalesIds] = useState<number[]>([]);
 
-  // Total calculado en frontend
   const totalEstimado = lineas.reduce((acc, curr) => acc + curr.subtotal, 0);
 
-  // 1. CARGA INICIAL DE DATOS
+  // CARGA INICIAL DE DATOS
   useEffect(() => {
     async function loadData() {
+      // Si no hay token, no ejecutamos nada para evitar errores 401
+      if (!session?.user?.token) return;
+
       try {
+        // Configuramos el header de autorización
+        const headers = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.user.token}`
+        };
+
         const [resCli, resRep, resProd, resPedido] = await Promise.all([
-          fetch(`${API_BASE_URL}/clientes`),
-          fetch(`${API_BASE_URL}/repartos`),
-          fetch(`${API_BASE_URL}/productos`),
-          fetch(`${API_BASE_URL}/pedidos/${id}`)
+          fetch(`${API_BASE_URL}/clientes`, { headers }),
+          fetch(`${API_BASE_URL}/repartos`, { headers }),
+          fetch(`${API_BASE_URL}/productos`, { headers }),
+          fetch(`${API_BASE_URL}/pedidos/${id}`, { headers })
         ]);
 
         const dCli = await resCli.json();
         const dRep = await resRep.json();
         const dProd = await resProd.json();
         const dPedidoWrap = await resPedido.json();
-        const pedido = dPedidoWrap.data || dPedidoWrap; // Ajuste según tu respuesta backend
+
+        // 2. CORRECCIÓN: Definimos 'pedido' extrayéndolo de la respuesta
+        const pedido = dPedidoWrap.data || dPedidoWrap;
+
+        // Normalizamos la lista de repartos
+        const listaRepartos = Array.isArray(dRep) ? dRep : (dRep.data || []);
 
         setClientes(dCli.data || []);
-        setRepartos(dRep.data || []);
+        setRepartos(listaRepartos); // Esto llena el desplegable
         setProductos(dProd.data || []);
 
         // Poblar Cabecera
@@ -79,15 +93,14 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
         setRepartoId(pedido.repartoId?.toString() || '');
         setEstado(pedido.estado || 'Pendiente');
         
-        // Formatear fechas (yyyy-mm-dd)
         if (pedido.fechaEmision) setFechaEmision(pedido.fechaEmision.split('T')[0]);
         if (pedido.fechaEntrega) setFechaEntrega(pedido.fechaEntrega.split('T')[0]);
 
         // Poblar Líneas
         if (pedido.lineas && Array.isArray(pedido.lineas)) {
           const lineasMapeadas: LineaForm[] = pedido.lineas.map((l: any) => ({
-            id: l.id, // ID real
-            tempId: l.id, // Usamos el mismo como temp
+            id: l.id,
+            tempId: l.id,
             productoId: l.productoId.toString(),
             descripcion: l.descripcion,
             cantidad: Number(l.cantidad),
@@ -106,16 +119,19 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
         setLoading(false);
       }
     }
-    loadData();
-  }, [id]);
+    
+    // Solo cargamos los datos cuando tengamos la sesión lista
+    if (session?.user?.token) {
+        loadData();
+    }
+}, [id, session?.user?.token]);
 
   // --- MANEJO DE LÍNEAS ---
-
   const agregarLinea = () => {
     setLineas([
       ...lineas,
       { 
-        tempId: Date.now(), // ID temporal único
+        tempId: Date.now(),
         productoId: '', 
         descripcion: '', 
         cantidad: 1, 
@@ -127,21 +143,19 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
   };
 
   const eliminarLinea = (tempId: number) => {
-    // Solo quitamos de la vista. El borrado real ocurre en handleSubmit
     setLineas(lineas.filter(l => l.tempId !== tempId));
   };
 
   const actualizarLinea = (tempId: number, field: keyof LineaForm, value: any) => {
     setLineas(prevLineas => prevLineas.map(linea => {
       if (linea.tempId !== tempId) return linea;
-
       const updatedLinea = { ...linea, [field]: value };
 
       if (field === 'productoId') {
         const prod = productos.find(p => p.id.toString() === value);
         if (prod) {
           updatedLinea.descripcion = prod.nombre;
-          updatedLinea.precioUnitario = 0;
+          updatedLinea.precioUnitario = prod.precio || 0; // Usar el precio real si existe
         }
       }
       updatedLinea.subtotal = updatedLinea.cantidad * updatedLinea.precioUnitario;
@@ -149,13 +163,17 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
     }));
   };
 
-  // --- GUARDADO
+  // --- GUARDADO ---
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
 
     try {
-      // 1. Actualizar Cabecera
+      const headers = { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.user?.token}`
+      };
+
       const payloadCabecera = {
         clienteId: Number(clienteId),
         repartoId: Number(repartoId),
@@ -166,26 +184,22 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
       
       const resHead = await fetch(`${API_BASE_URL}/pedidos/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(payloadCabecera),
       });
 
       if (!resHead.ok) throw new Error('Error actualizando cabecera');
 
-      // 2. Procesar Líneas
       const promesasLineas = [];
-
-      // A) BORRADOS: Estaban en originales pero no en lineas actuales
       const idsActuales = lineas.filter(l => !l.esNueva).map(l => l.id);
       const idsParaBorrar = lineasOriginalesIds.filter(oldId => !idsActuales.includes(oldId));
 
       for (const idBorrar of idsParaBorrar) {
         promesasLineas.push(
-          fetch(`${API_BASE_URL}/lineas-pedido/${idBorrar}`, { method: 'DELETE' })
+          fetch(`${API_BASE_URL}/lineas-pedido/${idBorrar}`, { method: 'DELETE', headers })
         );
       }
 
-      // B) CREADOS Y ACTUALIZADOS
       for (const linea of lineas) {
         if (!linea.productoId) continue;
 
@@ -198,30 +212,26 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
         };
 
         if (linea.esNueva) {
-          // POST /lineas-pedido
           promesasLineas.push(
             fetch(`${API_BASE_URL}/lineas-pedido`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers,
               body: JSON.stringify(payloadLinea)
             })
           );
         } else {
-          // PATCH /lineas-pedido/:id
           promesasLineas.push(
             fetch(`${API_BASE_URL}/lineas-pedido/${linea.id}`, {
               method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
+              headers,
               body: JSON.stringify(payloadLinea)
             })
           );
         }
       }
 
-      // Ejecutar todas las promesas de líneas
       await Promise.all(promesasLineas);
 
-      // Éxito
       router.push('/dashboard/pedidos');
       router.refresh();
 
@@ -239,7 +249,6 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
     <div className="flex justify-center min-h-screen p-6 bg-muted/10">
       <form onSubmit={handleSubmit} className="w-full max-w-4xl space-y-6">
         
-        {/* Encabezado Visual */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Editar Pedido #{id}</h1>
           <Button type="button" variant="outline" size="sm" onClick={() => router.back()}>
@@ -254,7 +263,7 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
             <div className="space-y-2">
               <Label>Cliente</Label>
               <Select value={clienteId} onValueChange={setClienteId}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                 <SelectContent>
                   {clientes.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.nombre} {c.apellido}</SelectItem>)}
                 </SelectContent>
@@ -263,7 +272,7 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
             <div className="space-y-2">
               <Label>Reparto</Label>
               <Select value={repartoId} onValueChange={setRepartoId}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                 <SelectContent>
                   {repartos.map(r => <SelectItem key={r.id} value={r.id.toString()}>{r.nombre}</SelectItem>)}
                 </SelectContent>

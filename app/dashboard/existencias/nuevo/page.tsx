@@ -7,11 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { useSession } from 'next-auth/react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
 export default function NuevaExistenciaPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
 
   // Estados para listas desplegables
@@ -28,21 +30,33 @@ export default function NuevaExistenciaPage() {
 
   useEffect(() => {
     async function loadResources() {
+      if (!session?.user?.token) return;
       try {
+        const headers = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.user.token}`
+        };
+
         const [resProd, resRep] = await Promise.all([
-          fetch(`${API_BASE_URL}/productos`),
-          fetch(`${API_BASE_URL}/repartos`)
+          fetch(`${API_BASE_URL}/productos`, { headers }),
+          fetch(`${API_BASE_URL}/repartos`, { headers })
         ]);
+
         const dProd = await resProd.json();
         const dRep = await resRep.json();
-        setProductos(dProd.data || []);
-        setRepartos(dRep.data || []);
+
+        const listaProductos = Array.isArray(dProd) ? dProd : (dProd.data || []);
+        const listaRepartos = Array.isArray(dRep) ? dRep : (dRep.data || []);
+
+        setProductos(listaProductos);
+        setRepartos(listaRepartos);
+
       } catch (error) {
         console.error("Error cargando recursos", error);
       }
     }
     loadResources();
-  }, []);
+  }, [session?.user?.token]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -59,7 +73,9 @@ export default function NuevaExistenciaPage() {
     try {
       const res = await fetch(`${API_BASE_URL}/existencias`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' ,
+                   'Authorization': `Bearer ${session?.user?.token}`
+        },
         body: JSON.stringify(payload),
       });
 

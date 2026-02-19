@@ -6,25 +6,42 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { X, Filter } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import error from 'next/error';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
 export function ExistenciasFilter() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
 
   const [productos, setProductos] = useState<{id: number, nombre: string}[]>([]);
   const [repartos, setRepartos] = useState<{id: number, nombre: string}[]>([]);
 
   useEffect(() => {
+    if (!session?.user?.token) return;
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.user.token}`
+    };
+
     Promise.all([
-      fetch(`${API_BASE_URL}/productos`).then(r => r.json()),
-      fetch(`${API_BASE_URL}/repartos`).then(r => r.json())
-    ]).then(([prodData, repData]) => {
-      setProductos(prodData.data || []);
-      setRepartos(repData.data || []);
+      fetch(`${API_BASE_URL}/productos`, { headers }).then(r => r.json()),
+      fetch(`${API_BASE_URL}/repartos`, { headers }).then(r => r.json())
+    ])
+    .then(([prodData, repData]) => {
+      const listaProductos = Array.isArray(prodData) ? prodData : (prodData.data || []);
+      const listaRepartos = Array.isArray(repData) ? repData : (repData.data || []);
+      
+      setProductos(listaProductos);
+      setRepartos(listaRepartos);
+    })
+    .catch(error => {
+      console.error("Error cargando filtros:", error);
     });
-  }, []);
+  }, [session?.user?.token]);
 
   function handleFilterChange(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());

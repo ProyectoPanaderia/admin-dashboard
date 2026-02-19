@@ -13,9 +13,9 @@ interface ExistenciaType {
   cantidad: number;
   productoId: number;
   repartoId: number;
-  // Objetos opcionales por si el backend los manda poblados
-  Producto?: { nombre: string; peso?: number };
-  Reparto?: { nombre: string };
+
+  producto?: { nombre: string };
+  reparto?: { nombre: string };
 }
 
 const API_BASE_URL =
@@ -34,7 +34,7 @@ const formatDate = (dateStr: string) => {
 
   async function handleDelete() {
     // Intentamos obtener un nombre legible para la alerta
-    const nombreProducto = existencia.Producto?.nombre || `ID ${existencia.productoId}`;
+    const nombreProducto = existencia.producto?.nombre || `ID ${existencia.productoId}`;
     
     const confirmar = window.confirm(
       `¿Seguro que querés eliminar el lote de "${nombreProducto}" (Cant: ${existencia.cantidad})?`
@@ -64,12 +64,12 @@ const formatDate = (dateStr: string) => {
     <TableRow>
       {/* Columna Producto: Muestra nombre si existe, sino ID */}
       <TableCell className="font-medium">
-        {existencia.Producto?.nombre || `Prod. #${existencia.productoId}`}
+        {existencia.producto?.nombre || `Prod. #${existencia.productoId}`}
       </TableCell>
 
       {/* Columna Reparto */}
       <TableCell>
-        {existencia.Reparto?.nombre || `Rep. #${existencia.repartoId}`}
+        {existencia.reparto?.nombre || `Rep. #${existencia.repartoId}`}
       </TableCell>
 
       {/* Fechas mapeadas desde fechaE y fechaV */}

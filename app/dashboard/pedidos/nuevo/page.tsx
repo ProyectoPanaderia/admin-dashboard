@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Trash2, Plus } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -24,6 +25,7 @@ interface LineaForm {
 
 export default function NuevoPedidoPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
 
   // --- Datos Maestros ---
@@ -46,25 +48,57 @@ export default function NuevoPedidoPage() {
   // Cargar recursos al inicio
   useEffect(() => {
     async function loadResources() {
+      if (!session?.user?.token) return;
       try {
+        const headers = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.user.token}`
+        };
+        
         const [resCli, resRep, resProd] = await Promise.all([
-          fetch(`${API_BASE_URL}/clientes`),
-          fetch(`${API_BASE_URL}/repartos`),
-          fetch(`${API_BASE_URL}/productos`)
+          fetch(`${API_BASE_URL}/clientes`, { headers }),
+          fetch(`${API_BASE_URL}/repartos`, { headers }),
+          fetch(`${API_BASE_URL}/productos`, { headers })
         ]);
         const dCli = await resCli.json();
         const dRep = await resRep.json();
         const dProd = await resProd.json();
 
-        setClientes(dCli.data || []);
-        setRepartos(dRep.data || []);
-        setProductos(dProd.data || []);
+        const listaClientes = Array.isArray(dCli) ? dCli : (dCli.data || []);
+        const listaRepartos = Array.isArray(dRep) ? dRep : (dRep.data || []);
+        const listaProductos = Array.isArray(dProd) ? dProd : (dProd.data || []);
+        
+        setClientes(listaClientes);
+        setRepartos(listaRepartos);
+        setProductos(listaProductos);
+
       } catch (error) {
         console.error("Error cargando recursos", error);
       }
     }
     loadResources();
-  }, []);
+  }, [session?.user?.token]);
+
+  // -- Buscar Precio en el Backend
+  async function fetchPrecioVigente(productoId: number, fecha: string, tipoPrecio: string = 'reventa'): Promise<number> {
+    if (!session?.user?.token) return 0;
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/precio-productos/vigente/${productoId}?fecha=${fecha}&nombre=${tipoPrecio}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.user.token}`
+          }
+        }
+      );
+      if (!res.ok) return 0;
+      const json = await res.json();
+      return json.data?.valor || 0; 
+    } catch {
+      return 0;
+    }
+  }
 
   // --- Manejo de Líneas ---
 
@@ -82,30 +116,48 @@ export default function NuevoPedidoPage() {
     ]);
   };
 
-  const eliminarLinea = (tempId: number) => {
+ const eliminarLinea = (tempId: number) => {
     setLineas(lineas.filter(l => l.tempId !== tempId));
   };
 
-  const actualizarLinea = (tempId: number, field: keyof LineaForm, value: any) => {
-    setLineas(prevLineas => prevLineas.map(linea => {
-      if (linea.tempId !== tempId) return linea;
+  // 4. Corrección en la función de actualizarLinea
+  const actualizarLinea = async (tempId: number, field: keyof LineaForm, value: any) => {
+    let nuevoPrecio = 0;
+    let nombreProd = '';
 
-      const updatedLinea = { ...linea, [field]: value };
-
-      // Lógica especial si cambia el producto
-      if (field === 'productoId') {
-        const prod = productos.find(p => p.id.toString() === value);
-        if (prod) {
-          updatedLinea.descripcion = prod.nombre;
-          updatedLinea.precioUnitario = 0;
-        }
+    // Si cambia el producto, buscamos su precio ANTES de actualizar el estado
+    if (field === 'productoId') {
+      const prod = productos.find(p => p.id.toString() === value);
+      if (prod) {
+        nombreProd = prod.nombre;
+        // Buscamos el precio para la fecha de emisión seleccionada
+        nuevoPrecio = await fetchPrecioVigente(prod.id, fechaEmision, 'reventa'); 
       }
+    }
+    
+    setLineas(prevLineas => {
+      return prevLineas.map(linea => {
+        if (linea.tempId !== tempId) return linea;
 
-      // Recalcular subtotal siempre
-      updatedLinea.subtotal = updatedLinea.cantidad * updatedLinea.precioUnitario;
+        // Creamos una copia de la línea y aplicamos el cambio
+        const valFinal = (field === 'cantidad' || field === 'precioUnitario') ? Number(value) : value;
+        const updatedLinea = { ...linea, [field]: valFinal };
 
-      return updatedLinea;
-    }));
+        // Lógica especial si cambia el producto
+        if (field === 'productoId') {
+          const prod = productos.find(p => p.id.toString() === value);
+          if (prod) {
+            updatedLinea.descripcion = nombreProd;
+            updatedLinea.precioUnitario = nuevoPrecio;
+          }
+        }
+
+        // Recalcular subtotal siempre
+        updatedLinea.subtotal = updatedLinea.cantidad * updatedLinea.precioUnitario;
+
+        return updatedLinea;
+      });
+    });
   };
 
   // --- Submit ---
@@ -124,20 +176,21 @@ export default function NuevoPedidoPage() {
       fechaEmision,
       fechaEntrega,
       estado: 'Pendiente',
-      // Mapeamos para quitar el tempId y formatear números
       lineas: lineas.map(l => ({
         productoId: Number(l.productoId),
         cantidad: Number(l.cantidad),
         precioUnitario: Number(l.precioUnitario),
-        descripcion: l.descripcion, // IMPORTANTE: Enviamos el snapshot
-        // subtotal se puede mandar o dejar que el backend lo calcule (el backend lo valida)
+        descripcion: l.descripcion, 
       }))
     };
 
     try {
       const res = await fetch(`${API_BASE_URL}/pedidos`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.user?.token}` // ENVIAMOS TOKEN AL GUARDAR TAMBIÉN
+        },
         body: JSON.stringify(payload),
       });
 

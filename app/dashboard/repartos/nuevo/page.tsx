@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { useSession } from 'next-auth/react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -15,13 +16,16 @@ export default function NuevoRepartoPage() {
   const [tercerizado, setTercerizado] = useState('N');
   const [estado, setEstado] = useState('A');
   const router = useRouter();
+  const { data: session } = useSession();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
     const res = await fetch(`${API_BASE_URL}/repartos`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json',
+                  Authorization: `Bearer ${session?.user.token}`
+               },
       body: JSON.stringify({ nombre, tercerizado, estado }),
     });
 
@@ -29,8 +33,8 @@ export default function NuevoRepartoPage() {
       router.push('/dashboard/repartos');
       router.refresh();
     } else {
-      alert('Error al crear el reparto');
-    }
+      const errorData = await res.json().catch(() => ({}));
+      alert('Error al crear el reparto: ' + (errorData.error || 'No autorizado'));    }
   }
 
   return (
