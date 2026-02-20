@@ -47,6 +47,9 @@ export default function DashboardPage() {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${session?.user?.token}`
   });
+  
+  const userRole = session?.user?.rol;
+  const userRepartoId = session?.user?.repartoId;
 
   async function fetchRemitos(desde: string, hasta: string) {
     if (!session?.user?.token) return;
@@ -59,10 +62,16 @@ export default function DashboardPage() {
       params.append('fechaHasta', hasta);
       params.append('pageSize', '100');
       
+      // Filtros de la URL
       if (searchParams.get('clienteId')) {
         params.append('clienteId', searchParams.get('clienteId')!);
       }
-      if (searchParams.get('repartoId')) {
+
+      // 2. LÓGICA DE REPARTO:
+      // Si es repartidor, forzamos SU ID. Si no, usamos el de los filtros (si existe).
+      if (userRole === 'REPARTIDOR' && userRepartoId) {
+        params.append('repartoId', String(userRepartoId));
+      } else if (searchParams.get('repartoId')) {
         params.append('repartoId', searchParams.get('repartoId')!);
       }
 

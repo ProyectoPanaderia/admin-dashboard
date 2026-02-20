@@ -16,6 +16,9 @@ export default function NuevaExistenciaPage() {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
 
+  const userRole = session?.user?.rol;
+  const userRepartoId = session?.user?.repartoId;
+
   // Estados para listas desplegables
   const [productos, setProductos] = useState<{id: number, nombre: string}[]>([]);
   const [repartos, setRepartos] = useState<{id: number, nombre: string}[]>([]);
@@ -27,6 +30,12 @@ export default function NuevaExistenciaPage() {
   // Fechas por defecto: Elaboración hoy, Vencimiento mañana (puedes ajustar lógica)
   const [fechaE, setFechaE] = useState(new Date().toISOString().split('T')[0]);
   const [fechaV, setFechaV] = useState('');
+
+  useEffect(() => {
+    if (userRole === 'REPARTIDOR' && userRepartoId) {
+      setRepartoId(String(userRepartoId));
+    }
+  }, [userRole, userRepartoId]);
 
   useEffect(() => {
     async function loadResources() {
@@ -58,40 +67,54 @@ export default function NuevaExistenciaPage() {
     loadResources();
   }, [session?.user?.token]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
+async function handleSubmit(e: React.FormEvent) {
+  e.preventDefault();
 
-    const payload = {
-      productoId: Number(productoId),
-      repartoId: Number(repartoId),
-      cantidad: Number(cantidad),
-      fechaE,
-      fechaV
-    };
+  // 1. Determinamos el ID de reparto de forma segura
+  // Si es repartidor, lo sacamos directo de la sesión. 
+  // Si no, lo sacamos del select (estado).
+  const idParaEnviar = userRole === 'REPARTIDOR' ? userRepartoId : repartoId;
 
-    try {
-      const res = await fetch(`${API_BASE_URL}/existencias`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' ,
-                   'Authorization': `Bearer ${session?.user?.token}`
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        router.push('/dashboard/existencias');
-        router.refresh();
-      } else {
-        alert('Error al crear el lote de existencia');
-      }
-    } catch (error) {
-      console.error(error);
-      alert('Error de conexión');
-    } finally {
-      setLoading(false);
-    }
+  // 2. Validación extra antes de enviar
+  if (!idParaEnviar) {
+    alert('Error: No se pudo determinar el reparto. Por favor, reintente.');
+    return;
   }
+
+  setLoading(true);
+
+  const payload = {
+    productoId: Number(productoId),
+    repartoId: Number(idParaEnviar), // Nos aseguramos que sea número
+    cantidad: Number(cantidad),
+    fechaE,
+    fechaV
+  };
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/existencias`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.user?.token}`
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      router.push('/dashboard/existencias');
+      router.refresh();
+    } else {
+      const errData = await res.json();
+      alert(`Error: ${errData.message || 'No se pudo crear el lote'}`);
+    }
+  } catch (error) {
+    console.error(error);
+    alert('Error de conexión');
+  } finally {
+    setLoading(false);
+  }
+}
 
   return (
     <div className="flex justify-center items-center min-h-screen p-8 bg-muted/10">
@@ -119,7 +142,12 @@ export default function NuevaExistenciaPage() {
 
               <div className="space-y-2">
                 <Label>Reparto</Label>
-                <Select value={repartoId} onValueChange={setRepartoId} required>
+                <Select 
+                  value={repartoId} 
+                  onValueChange={setRepartoId} 
+                  required
+                  disabled={userRole === 'REPARTIDOR'}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar..." />
                   </SelectTrigger>
@@ -129,6 +157,9 @@ export default function NuevaExistenciaPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {userRole === 'REPARTIDOR' && (
+                  <p className="text-xs text-muted-foreground">Reparto asignado automáticamente.</p>
+                )}
               </div>
             </div>
 

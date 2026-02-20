@@ -18,7 +18,12 @@ export default function EditarExistenciaPage() {
   const { data: session } = useSession();
 
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   
+  // Extraemos datos del usuario
+  const userRole = session?.user?.rol;
+  const userRepartoId = session?.user?.repartoId;
+
   // Listas
   const [productos, setProductos] = useState<{id: number, nombre: string}[]>([]);
   const [repartos, setRepartos] = useState<{id: number, nombre: string}[]>([]);
@@ -51,22 +56,16 @@ export default function EditarExistenciaPage() {
         const dEx = await resEx.json();
         const existencia = dEx.data || dEx;
 
-        const listaProductos = Array.isArray(dProd) ? dProd : (dProd.data || []);
-        const listaRepartos = Array.isArray(dRep) ? dRep : (dRep.data || []);
-
-        setProductos(listaProductos);
-        setRepartos(listaRepartos);
+        setProductos(Array.isArray(dProd) ? dProd : (dProd.data || []));
+        setRepartos(Array.isArray(dRep) ? dRep : (dRep.data || []));
 
         // Poblar formulario
         setProductoId(existencia.productoId?.toString() || '');
         setRepartoId(existencia.repartoId?.toString() || '');
         setCantidad(existencia.cantidad?.toString() || '');
         
-        // Verificamos si existe antes de cortar el string. 
-        // Si es null o undefined, ponemos string vacío para el input.
         const rawFechaE = existencia.fechaE;
         const rawFechaV = existencia.fechaV;
-
         setFechaE(rawFechaE ? String(rawFechaE).split('T')[0] : '');
         setFechaV(rawFechaV ? String(rawFechaV).split('T')[0] : '');
 
@@ -85,22 +84,31 @@ export default function EditarExistenciaPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSaving(true);
+
+    // Lógica de seguridad: Si es repartidor, forzamos su ID de reparto de la sesión
+    const finalRepartoId = userRole === 'REPARTIDOR' ? userRepartoId : repartoId;
+
+    if (!finalRepartoId) {
+        alert("Error: El ID de reparto no está disponible.");
+        setSaving(false);
+        return;
+    }
     
     const payload = {
       productoId: Number(productoId),
-      repartoId: Number(repartoId),
+      repartoId: Number(finalRepartoId),
       cantidad: Number(cantidad),
       fechaE: fechaE || null, 
       fechaV: fechaV || null,
     };
 
-    console.log("Enviando payload:", payload); // Para debugear
-
     try {
       const res = await fetch(`${API_BASE_URL}/existencias/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json',
-                   'Authorization': `Bearer ${session?.user?.token}`
+        method: 'PUT', // O PATCH según tu backend
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.user?.token}`
          },
         body: JSON.stringify(payload),
       });
@@ -110,12 +118,13 @@ export default function EditarExistenciaPage() {
         router.refresh();
       } else {
         const errorData = await res.json();
-        console.error("Error backend:", errorData);
         alert(`Error al actualizar: ${errorData.message || 'Datos inválidos'}`);
       }
     } catch (error) {
       console.error(error);
       alert('Error de conexión');
+    } finally {
+        setSaving(false);
     }
   }
 
@@ -139,17 +148,24 @@ export default function EditarExistenciaPage() {
                     {productos.map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.nombre}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">El producto no se puede cambiar en edición.</p>
+                <p className="text-xs text-muted-foreground">Producto bloqueado.</p>
               </div>
 
               <div className="space-y-2">
                 <Label>Reparto</Label>
-                <Select value={repartoId} onValueChange={setRepartoId}>
+                <Select 
+                    value={repartoId} 
+                    onValueChange={setRepartoId}
+                    disabled={userRole === 'REPARTIDOR'} // Bloqueado para repartidores
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {repartos.map(r => <SelectItem key={r.id} value={r.id.toString()}>{r.nombre}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                {userRole === 'REPARTIDOR' && (
+                    <p className="text-xs text-muted-foreground">Tu reparto está asignado.</p>
+                )}
               </div>
             </div>
 
@@ -161,13 +177,11 @@ export default function EditarExistenciaPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Fecha Elaboración</Label>
-                <Input type="date" value={fechaE} onChange={e => setFechaE(e.target.value)} 
-                required/>
+                <Input type="date" value={fechaE} onChange={e => setFechaE(e.target.value)} required/>
               </div>
               <div className="space-y-2">
                 <Label>Fecha Vencimiento</Label>
-                <Input type="date" value={fechaV} onChange={e => setFechaV(e.target.value)} 
-                required/>
+                <Input type="date" value={fechaV} onChange={e => setFechaV(e.target.value)} required/>
               </div>
             </div>
 
@@ -176,7 +190,9 @@ export default function EditarExistenciaPage() {
             <Button type="button" variant="outline" onClick={() => router.back()}>
               Cancelar
             </Button>
-            <Button type="submit">Actualizar</Button>
+            <Button type="submit" disabled={saving}>
+                {saving ? 'Guardando...' : 'Actualizar'}
+            </Button>
           </CardFooter>
         </form>
       </Card>

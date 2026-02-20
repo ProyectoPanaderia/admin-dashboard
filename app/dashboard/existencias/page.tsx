@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { PackagePlus } from 'lucide-react';
 import { ExistenciasFilter } from './existencias-filter';
 import { ExportarExistenciasButton } from './exportar-button';
+import { auth } from '@/auth';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -16,11 +17,12 @@ export default async function ExistenciasPage(props: SearchParamsProps) {
   const searchParams = await props.searchParams;
   const params = new URLSearchParams();
 
+  const session = await auth();
+  const userRole = session?.user?.rol;
+  const userRepartoId = session?.user?.repartoId;
+
   if (searchParams.productoId) {
     params.append('productoId', String(searchParams.productoId));
-  }
-  if (searchParams.repartoId) {
-    params.append('repartoId', String(searchParams.repartoId));
   }
   
   if (searchParams.fechaE) {
@@ -30,9 +32,24 @@ export default async function ExistenciasPage(props: SearchParamsProps) {
     params.append('fechaV', String(searchParams.fechaV));
   }
 
-  // Fetch al backend
+  // 3. FILTRO OBLIGATORIO PARA REPARTIDOR
+  if (userRole === 'REPARTIDOR' && userRepartoId) {
+    params.append('repartoId', String(userRepartoId));
+  } else if (searchParams.repartoId) {
+    // Solo si no es repartidor dejamos que use el filtro manual
+    params.append('repartoId', String(searchParams.repartoId));
+  }
+
+  // 4. Preparamos headers con el Token
+  const headers: HeadersInit = {};
+  if (session?.user?.token) {
+    headers['Authorization'] = `Bearer ${session.user.token}`;
+  }
+
+  // Fetch al backend con headers
   const res = await fetch(`${API_BASE_URL}/existencias?${params.toString()}`, { 
-    cache: 'no-store' 
+    cache: 'no-store',
+    headers
   });
   
   const data = await res.json();

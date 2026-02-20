@@ -48,6 +48,9 @@ function formatFechaVisual(fecha: string) {
 export function NuevoRemitoModal({ open, onOpenChange, onSuccess }: NuevoRemitoModalProps) {
   const { data: session } = useSession();
 
+  const userRole = session?.user?.rol;
+  const userRepartoId = session?.user?.repartoId;
+
   // Estados de datos
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [repartos, setRepartos] = useState<Reparto[]>([]);
@@ -88,17 +91,40 @@ export function NuevoRemitoModal({ open, onOpenChange, onSuccess }: NuevoRemitoM
     return Object.values(agrupados);
   }, [existencias]);
 
+  // Para precarga reactiva
+useEffect(() => {
+  const cargarPedidoSiHayStock = async () => {
+    // Solo actuamos si tenemos cliente, reparto y la lista de existencias ya bajó del servidor
+    if (form.clienteId && form.clienteId !== 'none' && form.repartoId && existencias.length > 0) {
+      await fetchUltimoPedido(form.clienteId);
+    }
+  };
+
+  cargarPedidoSiHayStock();
+}, [form.clienteId, existencias.length]); // Se dispara cuando cambia el cliente o terminan de cargar las existencias
+
 
   useEffect(() => {
     if (open) {
-      setForm({ clienteId: '', repartoId: '', fecha: getToday(), tipoPrecio: 'reventa' });
+      const initialReparto = userRole === 'REPARTIDOR' ? String(userRepartoId) : '';
+      
+      setForm({ 
+        clienteId: '', 
+        repartoId: initialReparto, 
+        fecha: getToday(), 
+        tipoPrecio: 'reventa' 
+      });
+      
       setLineas([]);
-      setExistencias([]);
       setSaveError('');
       setAvisoPedido(null);
       fetchInitialData();
+
+      if (initialReparto) {
+        fetchExistencias(initialReparto);
+      }
     }
-  }, [open]);
+  }, [open, userRole, userRepartoId]); // Escuchamos estas dependencias
 
   async function fetchInitialData() {
     if (!session?.user?.token) return;
@@ -132,19 +158,11 @@ export function NuevoRemitoModal({ open, onOpenChange, onSuccess }: NuevoRemitoM
   }
 
   // --- LÓGICA DE PRECARGA ---
-  async function fetchUltimoPedido(clienteId: string) {
-    if (!clienteId || clienteId === 'none') {
-      setAvisoPedido(null);
-      setPedidoIdUsado(null);
-      return;
-    }
+    async function fetchUltimoPedido(clienteId: string) {
     try {
       const res = await fetch(`${API}/pedidos/ultimo/${clienteId}`, { headers: getAuthHeaders() });
-      if (!res.ok) {
-        setAvisoPedido(null);
-        setPedidoIdUsado(null);
-        return;
-      }
+      if (!res.ok) return;
+      
       const data = await res.json();
       const pedido = data.data || data;
 
@@ -153,14 +171,15 @@ export function NuevoRemitoModal({ open, onOpenChange, onSuccess }: NuevoRemitoM
         setPedidoIdUsado(pedido.id);
         
         const nuevasLineas: LineaForm[] = [];
+        
         for (const l of pedido.lineas) {
-          // Ya no buscamos "existenciaId", sino si hay stock agrupado de este producto
+          // Ahora sí existencias estará cargado
           const tieneStock = existencias.some(e => (e.producto?.id || e.Producto?.id) === l.productoId && e.cantidad > 0);
           
           if (tieneStock) {
             const precio = await fetchPrecioVigente(l.productoId, form.fecha, form.tipoPrecio);
             nuevasLineas.push({
-              productoId: String(l.productoId), // Guardamos como string
+              productoId: String(l.productoId),
               cantidad: String(l.cantidad),
               precioUnitario: precio,
               subtotal: precio * Number(l.cantidad)
@@ -182,7 +201,12 @@ export function NuevoRemitoModal({ open, onOpenChange, onSuccess }: NuevoRemitoM
 
   const handleClienteChange = (id: string) => {
     setForm(prev => ({ ...prev, clienteId: id }));
-    if (form.repartoId) fetchUltimoPedido(id);
+    // Limpiamos el aviso si saca el cliente
+    if (!id || id === 'none') {
+      setAvisoPedido(null);
+      setPedidoIdUsado(null);
+      setLineas([]);
+    }
   };
 
   const handleTipoPrecioChange = async (tipoPrecio: string) => {
@@ -302,12 +326,19 @@ export function NuevoRemitoModal({ open, onOpenChange, onSuccess }: NuevoRemitoM
             </div>
             <div className="grid gap-2">
               <Label>Reparto <span className="text-red-500">*</span></Label>
-              <Select value={form.repartoId} onValueChange={handleRepartoChange}>
+              <Select 
+                value={form.repartoId} 
+                onValueChange={handleRepartoChange}
+                disabled={userRole === 'REPARTIDOR'} // <-- BLOQUEO
+              >
                 <SelectTrigger><SelectValue placeholder="Seleccioná" /></SelectTrigger>
                 <SelectContent>
                   {repartos.map((r) => <SelectItem key={r.id} value={String(r.id)}>{r.nombre}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {userRole === 'REPARTIDOR' && (
+                <p className="text-[10px] text-muted-foreground italic">Reparto asignado a tu perfil.</p>
+              )}
             </div>
           </div>
 

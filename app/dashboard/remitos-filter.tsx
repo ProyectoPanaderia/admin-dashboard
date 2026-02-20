@@ -15,8 +15,23 @@ export function RemitosFilter() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
 
+  const userRole = session?.user?.rol;
+  const userRepartoId = session?.user?.repartoId;
+
   const [clientes, setClientes] = useState<{id: number, nombre: string}[]>([]);
   const [repartos, setRepartos] = useState<{id: number, nombre: string}[]>([]);
+
+  // 1. EFECTO DE SEGURIDAD: Forzar el reparto en la URL si es repartidor
+  useEffect(() => {
+    if (userRole === 'REPARTIDOR' && userRepartoId) {
+      const currentReparto = searchParams.get('repartoId');
+      if (currentReparto !== String(userRepartoId)) {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('repartoId', String(userRepartoId));
+        router.replace(`/dashboard?${params.toString()}`);
+      }
+    }
+  }, [userRole, userRepartoId, searchParams, router]);
 
   useEffect(() => {
     if (!session?.user?.token) return;
@@ -53,11 +68,16 @@ export function RemitosFilter() {
   }
 
   function limpiarFiltros() {
-    router.replace('/dashboard');
+    // Si es repartidor, al limpiar mantenemos su repartoId
+    if (userRole === 'REPARTIDOR' && userRepartoId) {
+      router.replace(`/dashboard?repartoId=${userRepartoId}`);
+    } else {
+      router.replace('/dashboard');
+    }
   }
 
   const hayFiltros = searchParams.get('clienteId') || 
-                     searchParams.get('repartoId') || 
+                     (userRole !== 'REPARTIDOR' && searchParams.get('repartoId')) || // Si es repartidor, el reparto no cuenta como "filtro manual"
                      searchParams.get('fechaDesde') ||
                      searchParams.get('fechaHasta');
 
@@ -87,10 +107,13 @@ export function RemitosFilter() {
         <Select 
           value={searchParams.get('repartoId') || ''} 
           onValueChange={(val) => handleFilterChange('repartoId', val)}
+          disabled={userRole === 'REPARTIDOR'} // <-- BLOQUEO
         >
-          <SelectTrigger className="h-9"><SelectValue placeholder="Todos" /></SelectTrigger>
+          <SelectTrigger className="h-9">
+            <SelectValue placeholder={userRole === 'REPARTIDOR' ? "Cargando..." : "Todos"} />
+          </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
+            {userRole !== 'REPARTIDOR' && <SelectItem value="all">Todos</SelectItem>}
             {repartos.map(r => (
               <SelectItem key={r.id} value={r.id.toString()}>{r.nombre}</SelectItem>
             ))}

@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { X, Filter } from 'lucide-react';
 import { useSession } from 'next-auth/react';
-import error from 'next/error';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -16,8 +15,24 @@ export function ExistenciasFilter() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
 
+  // --- DATOS DEL USUARIO ---
+  const userRole = session?.user?.rol;
+  const userRepartoId = session?.user?.repartoId;
+
   const [productos, setProductos] = useState<{id: number, nombre: string}[]>([]);
   const [repartos, setRepartos] = useState<{id: number, nombre: string}[]>([]);
+
+  // 1. FORZAR REPARTO EN URL SI ES REPARTIDOR
+  useEffect(() => {
+    if (userRole === 'REPARTIDOR' && userRepartoId) {
+      const currentReparto = searchParams.get('repartoId');
+      if (currentReparto !== String(userRepartoId)) {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('repartoId', String(userRepartoId));
+        router.replace(`/dashboard/existencias?${params.toString()}`);
+      }
+    }
+  }, [userRole, userRepartoId, searchParams, router]);
 
   useEffect(() => {
     if (!session?.user?.token) return;
@@ -54,12 +69,17 @@ export function ExistenciasFilter() {
   }
 
   function limpiarFiltros() {
-    router.replace('/dashboard/existencias');
+    // 2. LIMPIAR SIN PERDER EL REPARTO SI ES REPARTIDOR
+    if (userRole === 'REPARTIDOR' && userRepartoId) {
+      router.replace(`/dashboard/existencias?repartoId=${userRepartoId}`);
+    } else {
+      router.replace('/dashboard/existencias');
+    }
   }
 
-  // Chequeamos si hay algún filtro activo para mostrar el botón X
+  // Chequeamos si hay algún filtro activo (el reparto del repartidor no cuenta como "activo")
   const hayFiltros = searchParams.get('productoId') || 
-                     searchParams.get('repartoId') || 
+                     (userRole !== 'REPARTIDOR' && searchParams.get('repartoId')) || 
                      searchParams.get('fechaV') ||
                      searchParams.get('fechaE');
 
@@ -89,10 +109,13 @@ export function ExistenciasFilter() {
         <Select 
           value={searchParams.get('repartoId') || ''} 
           onValueChange={(val) => handleFilterChange('repartoId', val)}
+          disabled={userRole === 'REPARTIDOR'} // 3. BLOQUEO VISUAL
         >
-          <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue placeholder={userRole === 'REPARTIDOR' ? "Cargando..." : "Todos"} />
+          </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
+            {userRole !== 'REPARTIDOR' && <SelectItem value="all">Todos</SelectItem>}
             {repartos.map(r => (
               <SelectItem key={r.id} value={r.id.toString()}>{r.nombre}</SelectItem>
             ))}
@@ -100,7 +123,7 @@ export function ExistenciasFilter() {
         </Select>
       </div>
 
-      {/* NUEVO: Filtro Elaboración */}
+      {/* Filtro Elaboración */}
       <div className="w-[150px]">
         <label className="text-sm font-medium mb-1 block">Fecha Elaboración</label>
         <Input 
