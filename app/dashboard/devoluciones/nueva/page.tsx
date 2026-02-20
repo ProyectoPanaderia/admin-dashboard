@@ -22,40 +22,34 @@ interface LineaForm {
   subtotal: number;
 }
 
-export default function NuevoPedidoPage() {
+export default function NuevaDevolucionPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
 
-  // --- OBTENER ROL Y REPARTO DEL USUARIO ---
-  const userRole = session?.user?.rol || session?.user?.rol;
+  const userRole = session?.user?.rol;
   const userRepartoId = session?.user?.repartoId;
 
-  // --- Datos Maestros ---
   const [clientes, setClientes] = useState<{id: number, nombre: string}[]>([]);
   const [repartos, setRepartos] = useState<{id: number, nombre: string}[]>([]);
   const [productos, setProductos] = useState<{id: number, nombre: string}[]>([]);
 
-  // --- Estado Cabecera ---
+  // Estado Cabecera Devolución
   const [clienteId, setClienteId] = useState('');
   const [repartoId, setRepartoId] = useState('');
-  const [fechaEmision, setFechaEmision] = useState(new Date().toISOString().split('T')[0]);
-  const [fechaEntrega, setFechaEntrega] = useState(''); 
+  const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
+  const [razon, setRazon] = useState('Sobrante'); // Valor por defecto
 
-  // --- Estado Detalle (Líneas) ---
   const [lineas, setLineas] = useState<LineaForm[]>([]);
 
-  // --- Total Calculado ---
   const totalEstimado = lineas.reduce((acc, curr) => acc + curr.subtotal, 0);
 
-  // AUTO-SELECCIÓN DE REPARTO PARA REPARTIDOR
   useEffect(() => {
     if (userRole === 'REPARTIDOR' && userRepartoId) {
       setRepartoId(String(userRepartoId));
     }
   }, [userRole, userRepartoId]);
 
-  // Cargar recursos al inicio
   useEffect(() => {
     async function loadResources() {
       if (!session?.user?.token) return;
@@ -85,12 +79,11 @@ export default function NuevoPedidoPage() {
     loadResources();
   }, [session?.user?.token]);
 
-  // -- Buscar Precio en el Backend
-  async function fetchPrecioVigente(productoId: number, fecha: string, tipoPrecio: string = 'reventa'): Promise<number> {
+  async function fetchPrecioVigente(productoId: number, fechaConsulta: string): Promise<number> {
     if (!session?.user?.token) return 0;
     try {
       const res = await fetch(
-        `${API_BASE_URL}/precio-productos/vigente/${productoId}?fecha=${fecha}&nombre=${tipoPrecio}`,
+        `${API_BASE_URL}/precio-productos/vigente/${productoId}?fecha=${fechaConsulta}&nombre=reventa`,
         { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.user.token}` } }
       );
       if (!res.ok) return 0;
@@ -101,12 +94,11 @@ export default function NuevoPedidoPage() {
     }
   }
 
-  // --- Manejo de Líneas ---
   const agregarLinea = () => {
     setLineas([...lineas, { tempId: Date.now(), productoId: '', descripcion: '', cantidad: 1, precioUnitario: 0, subtotal: 0 }]);
   };
 
- const eliminarLinea = (tempId: number) => {
+  const eliminarLinea = (tempId: number) => {
     setLineas(lineas.filter(l => l.tempId !== tempId));
   };
 
@@ -118,7 +110,7 @@ export default function NuevoPedidoPage() {
       const prod = productos.find(p => p.id.toString() === value);
       if (prod) {
         nombreProd = prod.nombre;
-        nuevoPrecio = await fetchPrecioVigente(prod.id, fechaEmision, 'reventa'); 
+        nuevoPrecio = await fetchPrecioVigente(prod.id, fecha); 
       }
     }
     
@@ -142,25 +134,24 @@ export default function NuevoPedidoPage() {
     });
   };
 
-  // --- Submit ---
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (lineas.length === 0) {
-      alert('Debes agregar al menos un producto al pedido.');
+      alert('Debes agregar al menos un producto devuelto.');
+      return;
+    }
+    if (!razon.trim()) {
+      alert('Debes ingresar el motivo de la devolución.');
       return;
     }
 
     setLoading(true);
 
-    const fechaEmisionSegura = `${fechaEmision}T12:00:00.000Z`;
-    const fechaEntregaSegura = fechaEntrega ? `${fechaEntrega}T12:00:00.000Z` : null;
-
     const payload = {
       clienteId: Number(clienteId),
       repartoId: Number(repartoId),
-      fechaEmision: fechaEmisionSegura,
-      fechaEntrega: fechaEntregaSegura,
-      estado: 'Pendiente',
+      fecha: `${fecha}T12:00:00.000Z`, // Forzamos formato seguro
+      razon,
       total: totalEstimado, 
       lineas: lineas.map(l => ({
         productoId: Number(l.productoId),
@@ -172,7 +163,7 @@ export default function NuevoPedidoPage() {
     };
 
     try {
-      const res = await fetch(`${API_BASE_URL}/pedidos`, {
+      const res = await fetch(`${API_BASE_URL}/devoluciones`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -182,11 +173,11 @@ export default function NuevoPedidoPage() {
       });
 
       if (res.ok) {
-        router.push('/dashboard/pedidos');
+        router.push('/dashboard/devoluciones');
         router.refresh();
       } else {
         const errData = await res.json();
-        alert(`Error: ${errData.errors?.[0] || 'No se pudo crear el pedido'}`);
+        alert(`Error: ${errData.errors?.[0] || 'No se pudo cargar la devolución'}`);
       }
     } catch (error) {
       console.error(error);
@@ -200,7 +191,7 @@ export default function NuevoPedidoPage() {
     <div className="flex justify-center min-h-screen p-6 bg-muted/10">
       <form onSubmit={handleSubmit} className="w-full max-w-4xl space-y-6">
         <Card>
-          <CardHeader><CardTitle>Nuevo Pedido</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Cargar Devolución</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
             <div className="space-y-2">
@@ -230,12 +221,19 @@ export default function NuevoPedidoPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Fecha Emisión</Label>
-              <Input type="date" value={fechaEmision} onChange={e => setFechaEmision(e.target.value)} required />
+              <Label>Fecha</Label>
+              <Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} required />
             </div>
+
             <div className="space-y-2">
-              <Label>Fecha Entrega</Label>
-              <Input type="date" value={fechaEntrega} onChange={e => setFechaEntrega(e.target.value)} required />
+              <Label>Motivo de Devolución</Label>
+              <Input 
+                type="text" 
+                placeholder="Ej. Sobrante, Roto, etc." 
+                value={razon} 
+                onChange={e => setRazon(e.target.value)} 
+                required 
+              />
             </div>
 
           </CardContent>
@@ -244,7 +242,7 @@ export default function NuevoPedidoPage() {
         {/* --- TARJETA LÍNEAS (Productos) --- */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Productos</CardTitle>
+            <CardTitle>Productos Devueltos</CardTitle>
             <Button type="button" size="sm" onClick={agregarLinea} variant="outline">
               <Plus className="h-4 w-4 mr-2" /> Agregar Producto
             </Button>
@@ -264,7 +262,7 @@ export default function NuevoPedidoPage() {
                 {lineas.length === 0 && (
                   <TableRow>
                     <TableHead colSpan={5} className="text-center py-4 text-muted-foreground">
-                      Agrega productos al pedido
+                      Agrega productos a la devolución
                     </TableHead>
                   </TableRow>
                 )}
@@ -279,12 +277,18 @@ export default function NuevoPedidoPage() {
                       </Select>
                     </TableCell>
                     <TableCell>
-                      <Input type="number" className="h-8 w-24" value={linea.precioUnitario} onChange={(e) => actualizarLinea(linea.tempId, 'precioUnitario', e.target.value)} />
+                      <Input 
+                        type="number" 
+                        className="h-8 w-24 bg-muted cursor-not-allowed text-muted-foreground font-medium" 
+                        value={linea.precioUnitario} 
+                        readOnly 
+                        disabled
+                      />
                     </TableCell>
                     <TableCell>
                       <Input type="number" className="h-8 w-20" min="1" value={linea.cantidad} onChange={(e) => actualizarLinea(linea.tempId, 'cantidad', e.target.value)} />
                     </TableCell>
-                    <TableCell className="text-right font-medium">${linea.subtotal.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-medium text-red-600">-${linea.subtotal.toFixed(2)}</TableCell>
                     <TableCell>
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => eliminarLinea(linea.tempId)}>
                         <Trash2 className="h-4 w-4" />
@@ -296,14 +300,14 @@ export default function NuevoPedidoPage() {
             </Table>
           </CardContent>
           <CardFooter className="flex justify-end border-t p-4 bg-muted/5">
-             <div className="text-xl font-bold">Total: ${totalEstimado.toFixed(2)}</div>
+             <div className="text-xl font-bold text-red-600">Total a Favor: -${totalEstimado.toFixed(2)}</div>
           </CardFooter>
         </Card>
 
         <div className="flex justify-end gap-4">
           <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
           <Button type="submit" disabled={loading} className="w-40">
-            {loading ? 'Creando...' : 'Guardar Pedido'}
+            {loading ? 'Cargando...' : 'Guardar Devolución'}
           </Button>
         </div>
       </form>

@@ -81,6 +81,10 @@ function DesktopNav({ esAdmin }: { esAdmin: boolean }) {
           <NavItem href="/dashboard/pedidos" label="Pedidos">
             <Image src="/entrega-de-pedidos.png" alt="Pedidos" width={20} height={20} className="object-contain" />
           </NavItem>
+
+          <NavItem href="/dashboard/devoluciones" label="Devoluciones">
+            <Image src="/devoluciones.png" alt="Devoluciones" width={20} height={20} className="object-contain" />
+          </NavItem>
         </div>
 
         <div className="pb-4">
@@ -140,7 +144,6 @@ export function MobileNav({ esAdmin }: { esAdmin: boolean }) {
               </SheetClose>
             </>
           )}
-
           <SheetClose asChild>
             <Link href="/dashboard/existencias" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
               <Image src="/existencias.png" alt="Existencias" width={20} height={20} className="object-contain" />
@@ -153,7 +156,12 @@ export function MobileNav({ esAdmin }: { esAdmin: boolean }) {
               Pedidos
             </Link>
           </SheetClose>
-
+          <SheetClose asChild>
+            <Link href="/dashboard/devoluciones" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
+              <Image src="/devoluciones.png" alt="Devoluciones" width={20} height={20} className="object-contain" />
+              Devoluciones
+            </Link>
+          </SheetClose>
           <div className="mt-auto border-t pt-4">
              <LogoutButton isMobile />
           </div>

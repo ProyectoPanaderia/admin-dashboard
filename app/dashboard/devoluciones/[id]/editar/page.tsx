@@ -13,7 +13,6 @@ import { useSession } from 'next-auth/react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
-// Tipos locales
 interface LineaForm {
   id?: number;
   tempId: number;
@@ -25,7 +24,7 @@ interface LineaForm {
   esNueva: boolean;
 }
 
-export default function EditarPedidoPage({ params }: { params: Promise<{ id: string }> }) {
+export default function EditarDevolucionPage({ params }: { params: Promise<{ id: string }> }) {
   const { data: session } = useSession();
   const { id } = use(params);
   const router = useRouter();
@@ -35,25 +34,22 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
 
   const userRole = session?.user?.rol;
 
-  // --- Datos Maestros ---
   const [clientes, setClientes] = useState<{id: number, nombre: string, apellido: string}[]>([]);
   const [repartos, setRepartos] = useState<{id: number, nombre: string}[]>([]);
   const [productos, setProductos] = useState<{id: number, nombre: string, precio?: number}[]>([]);
 
-  // --- Estado Cabecera ---
+  // Estado Cabecera
   const [clienteId, setClienteId] = useState('');
   const [repartoId, setRepartoId] = useState('');
-  const [fechaEmision, setFechaEmision] = useState('');
-  const [fechaEntrega, setFechaEntrega] = useState('');
-  const [estado, setEstado] = useState('Pendiente');
+  const [fecha, setFecha] = useState('');
+  const [razon, setRazon] = useState('');
 
-  // --- Estado Detalle (Líneas) ---
+  // Estado Detalle
   const [lineas, setLineas] = useState<LineaForm[]>([]);
   const [lineasOriginalesIds, setLineasOriginalesIds] = useState<number[]>([]);
 
   const totalEstimado = lineas.reduce((acc, curr) => acc + curr.subtotal, 0);
 
-  // CARGA INICIAL DE DATOS
   useEffect(() => {
     async function loadData() {
       if (!session?.user?.token) return;
@@ -64,39 +60,35 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
           'Authorization': `Bearer ${session.user.token}`
         };
 
-        const [resCli, resRep, resProd, resPedido] = await Promise.all([
+        const [resCli, resRep, resProd, resDev] = await Promise.all([
           fetch(`${API_BASE_URL}/clientes`, { headers }),
           fetch(`${API_BASE_URL}/repartos`, { headers }),
           fetch(`${API_BASE_URL}/productos`, { headers }),
-          fetch(`${API_BASE_URL}/pedidos/${id}`, { headers })
+          fetch(`${API_BASE_URL}/devoluciones/${id}`, { headers })
         ]);
 
         const dCli = await resCli.json();
         const dRep = await resRep.json();
         const dProd = await resProd.json();
-        const dPedidoWrap = await resPedido.json();
+        const dDevWrap = await resDev.json();
 
-        const pedido = dPedidoWrap.data || dPedidoWrap;
-        const listaRepartos = Array.isArray(dRep) ? dRep : (dRep.data || []);
+        const devolucion = dDevWrap.data || dDevWrap;
 
         setClientes(dCli.data || []);
-        setRepartos(listaRepartos);
+        setRepartos(Array.isArray(dRep) ? dRep : (dRep.data || []));
         setProductos(dProd.data || []);
 
-        // Poblar Cabecera
-        setClienteId(pedido.clienteId?.toString() || '');
-        setRepartoId(pedido.repartoId?.toString() || '');
-        setEstado(pedido.estado || 'Pendiente');
+        setClienteId(devolucion.clienteId?.toString() || '');
+        setRepartoId(devolucion.repartoId?.toString() || '');
+        setRazon(devolucion.razon || '');
         
-        if (pedido.fechaEmision) setFechaEmision(pedido.fechaEmision.split('T')[0]);
-        if (pedido.fechaEntrega) setFechaEntrega(pedido.fechaEntrega.split('T')[0]);
+        if (devolucion.fecha) setFecha(devolucion.fecha.split('T')[0]);
 
-        // Poblar Líneas
-        if (pedido.lineas && Array.isArray(pedido.lineas)) {
-          const lineasMapeadas: LineaForm[] = pedido.lineas.map((l: any) => ({
+        if (devolucion.lineas && Array.isArray(devolucion.lineas)) {
+          const lineasMapeadas: LineaForm[] = devolucion.lineas.map((l: any) => ({
             id: l.id,
-            tempId: l.id, // tempId seguro para las keys
-            productoId: l.productoId.toString(),
+            tempId: l.id, 
+            productoId: l.productoId?.toString() || '',
             descripcion: l.descripcion,
             cantidad: Number(l.cantidad),
             precioUnitario: Number(l.precioUnitario),
@@ -109,27 +101,21 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
 
       } catch (error) {
         console.error("Error cargando datos", error);
-        alert('No se pudo cargar el pedido');
+        alert('No se pudo cargar la devolución');
       } finally {
         setLoading(false);
       }
     }
     
-    if (session?.user?.token) {
-        loadData();
-    }
+    if (session?.user?.token) loadData();
   }, [id, session?.user?.token]);
 
-  // -- Buscar Precio en el Backend --
-  async function fetchPrecioVigente(productoId: number, fecha: string, tipoPrecio: string = 'reventa'): Promise<number> {
+  async function fetchPrecioVigente(productoId: number, fechaConsulta: string): Promise<number> {
     if (!session?.user?.token) return 0;
-    
-    // Si la fechaEmision está vacía, usamos hoy por defecto para no romper el endpoint
-    const fechaConsulta = fecha || new Date().toISOString().split('T')[0];
-    
+    const dateToUse = fechaConsulta || new Date().toISOString().split('T')[0];
     try {
       const res = await fetch(
-        `${API_BASE_URL}/precio-productos/vigente/${productoId}?fecha=${fechaConsulta}&nombre=${tipoPrecio}`,
+        `${API_BASE_URL}/precio-productos/vigente/${productoId}?fecha=${dateToUse}&nombre=reventa`,
         { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.user.token}` } }
       );
       if (!res.ok) return 0;
@@ -140,19 +126,10 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
     }
   }
 
-  // --- MANEJO DE LÍNEAS ---
   const agregarLinea = () => {
     setLineas([
       ...lineas,
-      { 
-        tempId: Date.now(),
-        productoId: '', 
-        descripcion: '', 
-        cantidad: 1, 
-        precioUnitario: 0, 
-        subtotal: 0,
-        esNueva: true
-      }
+      { tempId: Date.now(), productoId: '', descripcion: '', cantidad: 1, precioUnitario: 0, subtotal: 0, esNueva: true }
     ]);
   };
 
@@ -160,17 +137,15 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
     setLineas(lineas.filter(l => l.tempId !== tempId));
   };
 
-  // Ahora es asíncrona para poder esperar el precio del backend
   const actualizarLinea = async (tempId: number, field: keyof LineaForm, value: any) => {
     let nuevoPrecio = 0;
     let nombreProd = '';
 
-    // Si cambiamos el producto, vamos a buscar su precio primero antes de setear el estado
     if (field === 'productoId') {
       const prod = productos.find(p => p.id.toString() === value);
       if (prod) {
         nombreProd = prod.nombre;
-        nuevoPrecio = await fetchPrecioVigente(prod.id, fechaEmision, 'reventa'); 
+        nuevoPrecio = await fetchPrecioVigente(prod.id, fecha); 
       }
     }
 
@@ -187,15 +162,18 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
         updatedLinea.cantidad = parseInt(value, 10) || 0;
       }
 
-      // Recalcular el subtotal
       updatedLinea.subtotal = Number(updatedLinea.cantidad) * Number(updatedLinea.precioUnitario);
       return updatedLinea;
     }));
   };
 
-  // --- GUARDADO ---
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!razon.trim()) {
+      alert('Debes ingresar el motivo de la devolución.');
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -207,36 +185,32 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
       const payloadCabecera = {
         clienteId: Number(clienteId),
         repartoId: Number(repartoId),
-        fechaEmision,
-        fechaEntrega,
-        estado,
+        fecha,
+        razon,
         total: totalEstimado 
       };
       
-      const resHead = await fetch(`${API_BASE_URL}/pedidos/${id}`, {
+      const resHead = await fetch(`${API_BASE_URL}/devoluciones/${id}`, {
         method: 'PATCH',
         headers,
         body: JSON.stringify(payloadCabecera),
       });
       if (!resHead.ok) throw new Error('Error actualizando cabecera');
 
-      // 1. Borramos las líneas que se quitaron
+      // Borramos las que ya no están
       const idsActuales = lineas.filter(l => !l.esNueva).map(l => l.id);
       const idsParaBorrar = lineasOriginalesIds.filter(oldId => !idsActuales.includes(oldId));
 
       for (const idBorrar of idsParaBorrar) {
-        await fetch(`${API_BASE_URL}/lineas-pedido/${idBorrar}`, { 
-            method: 'DELETE', 
-            headers 
-        });
+        await fetch(`${API_BASE_URL}/lineas-devolucion/${idBorrar}`, { method: 'DELETE', headers });
       }
 
-      // 2. Creamos o editamos el resto secuencialmente
+      // Creamos o editamos
       for (const linea of lineas) {
         if (!linea.productoId) continue;
 
         const payloadLinea = {
-            pedidoId: Number(id),
+            devolucionId: Number(id),
             productoId: Number(linea.productoId),
             cantidad: Number(linea.cantidad),
             precioUnitario: Number(linea.precioUnitario),
@@ -244,13 +218,13 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
         };
 
         if (linea.esNueva) {
-          await fetch(`${API_BASE_URL}/lineas-pedido`, {
+          await fetch(`${API_BASE_URL}/lineas-devolucion`, {
             method: 'POST',
             headers,
             body: JSON.stringify(payloadLinea)
           });
         } else {
-          await fetch(`${API_BASE_URL}/lineas-pedido/${linea.id}`, {
+          await fetch(`${API_BASE_URL}/lineas-devolucion/${linea.id}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify(payloadLinea)
@@ -258,7 +232,7 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
         }
       }
 
-      router.push('/dashboard/pedidos');
+      router.push('/dashboard/devoluciones');
       router.refresh();
 
     } catch (error) {
@@ -269,20 +243,19 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
     }
   }
 
-  if (loading) return <div className="p-8 text-center">Cargando pedido...</div>;
+  if (loading) return <div className="p-8 text-center">Cargando devolución...</div>;
 
   return (
     <div className="flex justify-center min-h-screen p-6 bg-muted/10">
       <form onSubmit={handleSubmit} className="w-full max-w-4xl space-y-6">
         
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Editar Pedido #{id}</h1>
+          <h1 className="text-2xl font-bold">Editar Devolución #{id}</h1>
           <Button type="button" variant="outline" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" /> Volver
           </Button>
         </div>
 
-        {/* --- CABECERA --- */}
         <Card>
           <CardHeader><CardTitle>Datos Generales</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -307,32 +280,21 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
                   {repartos.map(r => <SelectItem key={r.id} value={r.id.toString()}>{r.nombre}</SelectItem>)}
                 </SelectContent>
               </Select>
-              {userRole === 'REPARTIDOR' && (
-                <p className="text-xs text-muted-foreground">No podés cambiar el reparto.</p>
-              )}
             </div>
             <div className="space-y-2">
-              <Label>Estado</Label>
-              <Select value={estado} onValueChange={setEstado}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Pendiente">Pendiente</SelectItem>
-                  <SelectItem value="Completado">Completado</SelectItem>
-                  <SelectItem value="Cancelado">Cancelado</SelectItem>
-                </SelectContent>
-              </Select>
+                <Label>Fecha</Label>
+                <Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
             </div>
             <div className="space-y-2">
-                <Label>Fecha Entrega</Label>
-                <Input type="date" value={fechaEntrega} onChange={e => setFechaEntrega(e.target.value)} />
+                <Label>Motivo</Label>
+                <Input type="text" value={razon} onChange={e => setRazon(e.target.value)} />
             </div>
           </CardContent>
         </Card>
 
-        {/* --- DETALLE --- */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Productos</CardTitle>
+            <CardTitle>Productos Devueltos</CardTitle>
             <Button type="button" size="sm" onClick={agregarLinea} variant="outline">
               <Plus className="h-4 w-4 mr-2" /> Agregar
             </Button>
@@ -378,7 +340,7 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
                             onChange={(e) => actualizarLinea(linea.tempId, 'cantidad', e.target.value)}                        
                         />
                     </TableCell>
-                    <TableCell className="text-right font-medium">${linea.subtotal.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-medium text-red-600">-${linea.subtotal.toFixed(2)}</TableCell>
                     <TableCell>
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => eliminarLinea(linea.tempId)}>
                         <Trash2 className="h-4 w-4" />
@@ -390,18 +352,16 @@ export default function EditarPedidoPage({ params }: { params: Promise<{ id: str
             </Table>
           </CardContent>
           <CardFooter className="flex justify-end border-t p-4 bg-muted/5">
-             <div className="text-xl font-bold">Total: ${totalEstimado.toFixed(2)}</div>
+             <div className="text-xl font-bold text-red-600">Total a Favor: -${totalEstimado.toFixed(2)}</div>
           </CardFooter>
         </Card>
 
-        {/* --- BOTONES --- */}
         <div className="flex justify-end gap-4">
           <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
           <Button type="submit" disabled={saving} className="w-40">
             {saving ? 'Guardando...' : <><Save className="h-4 w-4 mr-2" /> Guardar</>}
           </Button>
         </div>
-
       </form>
     </div>
   );

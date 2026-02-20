@@ -4,26 +4,22 @@ import { TableRow, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Eye, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react'; // <-- 1. Importamos useSession
-import { Pedido as PedidoType } from '@/types/pedido';
+import { useSession } from 'next-auth/react'; 
 
 interface Props {
-  pedido: PedidoType;
+  devolucion: any; // Ideal cambiar por tu DevolucionType
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
-export function Pedido({ pedido }: Props) {
+export function DevolucionRow({ devolucion }: Props) {
   const router = useRouter();
-  
-  // 2. Extraemos la sesión y el rol del usuario
   const { data: session } = useSession();
   const userRole = session?.user?.rol;
 
   // Formateadores
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-';
-    // Forzamos UTC para evitar que reste un día por zona horaria
     const date = new Date(dateStr);
     return date.toLocaleDateString('es-AR', { timeZone: 'UTC' });
   };
@@ -32,35 +28,21 @@ export function Pedido({ pedido }: Props) {
     return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount);
   };
 
-  // Badge de estado
-  const getEstadoBadge = (estado: string) => {
-    const styles: Record<string, string> = {
-      'Pendiente': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      'Completado': 'bg-green-100 text-green-800 border-green-200',
-      'Cancelado': 'bg-red-100 text-red-800 border-red-200',
-    };
-    return (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${styles[estado] || 'bg-gray-100 text-gray-800'}`}>
-        {estado}
-      </span>
-    );
-  };
-
   // Lógica de eliminado
   async function handleDelete() {
-    if (!confirm(`¿Seguro que deseas eliminar el pedido #${pedido.id}? Se borrarán sus líneas.`)) return;
+    if (!confirm(`¿Seguro que deseas eliminar la devolución #${devolucion.id}?`)) return;
     
     try {
-      const res = await fetch(`${API_BASE_URL}/pedidos/${pedido.id}`, { 
+      const res = await fetch(`${API_BASE_URL}/devoluciones/${devolucion.id}`, { 
         method: 'DELETE',
-        headers: { // <-- 3. Agregamos el Token al header
+        headers: { 
           'Authorization': `Bearer ${session?.user?.token}`
         }
       });
       if (res.ok) {
         router.refresh();
       } else {
-        alert('No se pudo eliminar el pedido.');
+        alert('No se pudo eliminar la devolución.');
       }
     } catch (error) {
       console.error(error);
@@ -70,55 +52,54 @@ export function Pedido({ pedido }: Props) {
 
   return (
     <TableRow>
-      <TableCell className="font-medium">#{pedido.id}</TableCell>
+      <TableCell className="font-medium">#{devolucion.id}</TableCell>
       
-      {/* Cliente */}
+      <TableCell>{formatDate(devolucion.fecha)}</TableCell>
+
       <TableCell>
-        {pedido.Cliente 
-          ? `${pedido.Cliente.nombre}` 
+        {devolucion.Cliente 
+          ? `${devolucion.Cliente.nombre} ${devolucion.Cliente.apellido || ''}` 
           : <span className="text-muted-foreground italic">Sin cliente</span>}
       </TableCell>
       
-      {/* Reparto */}
-      <TableCell>{pedido.Reparto?.nombre || '-'}</TableCell>
+      <TableCell>{devolucion.Reparto?.nombre || '-'}</TableCell>
       
-      {/* Fechas */}
-      <TableCell>{formatDate(pedido.fechaEmision)}</TableCell>
-      <TableCell>{formatDate(pedido.fechaEntrega)}</TableCell>
-      
-      {/* Estado */}
-      <TableCell>{getEstadoBadge(pedido.estado)}</TableCell>
+      {/* Razón / Motivo */}
+      <TableCell>
+        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border">
+          {devolucion.razon}
+        </span>
+      </TableCell>
       
       {/* Total */}
-      <TableCell className="text-right font-bold tabular-nums">
-        {formatMoney(pedido.total)}
+      <TableCell className="text-right font-bold tabular-nums text-red-600">
+        -{formatMoney(devolucion.total)}
       </TableCell>
       
       {/* Acciones */}
       <TableCell className="text-right">
         <div className="flex justify-end gap-2">
-          {/* Ver Detalle */}
+          
           <Button 
             variant="ghost" 
             size="icon" 
             className="h-8 w-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
-            onClick={() => router.push(`/dashboard/pedidos/${pedido.id}`)}
+            onClick={() => router.push(`/dashboard/devoluciones/${devolucion.id}`)}
           >
             <Eye className="h-4 w-4" />
           </Button>
           
-          {/* Editar */}
           <Button 
             variant="outline" 
             size="icon"
             className="h-8 w-8 text-blue-600 border-blue-200 hover:bg-blue-50"
-            onClick={() => router.push(`/dashboard/pedidos/${pedido.id}/editar`)}
+            onClick={() => router.push(`/dashboard/devoluciones/${devolucion.id}/editar`)}
           >
             <Pencil className="h-4 w-4" />
           </Button>
 
-          {/* Eliminar (SOLO VISIBLE SI NO ES REPARTIDOR) */}
-          {userRole !== 'REPARTIDOR' && ( // <-- 4. Condición para ocultar
+          {/* Eliminar protegido por rol */}
+          {userRole !== 'REPARTIDOR' && ( 
             <Button 
               variant="outline" 
               size="icon"
