@@ -133,7 +133,7 @@ export default function Page() {
       </div>
       
       <footer className="mt-12 text-center text-sm text-white">
-        <p>&copy; 2025 Hecho por las bestias. Todos los derechos reservados.</p>
+        <p>&copy; 2026 Panadería Santa Anita. Sistema de Gestión</p>
       </footer>
     </main>
   );

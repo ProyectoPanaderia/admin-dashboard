@@ -10,8 +10,11 @@ interface ExistenciaType {
   cantidad: number;
   fechaE: string; 
   fechaV: string;
-  Producto?: { nombre: string; peso?: number };
-  Reparto?: { nombre: string };
+  // Agregamos ambas opciones para evitar que no las encuentre
+  producto?: { nombre: string; peso?: number }; 
+  Producto?: { nombre: string; peso?: number }; 
+  reparto?: { nombre: string }; 
+  Reparto?: { nombre: string }; 
 }
 
 export function ExportarExistenciasButton({ existencias }: { existencias: ExistenciaType[] }) {
@@ -23,14 +26,21 @@ export function ExportarExistenciasButton({ existencias }: { existencias: Existe
     }
 
     // Mapeamos los datos para que queden lindos en el Excel
-    const dataFilas = existencias.map((item) => ({
-      'ID Lote': item.id,
-      'Producto': item.Producto?.nombre || 'Sin nombre',
-      'Reparto': item.Reparto?.nombre || 'Sin asignar',
-      'Cantidad': item.cantidad,
-      'F. Elaboración': new Date(item.fechaE).toLocaleDateString('es-AR'),
-      'F. Vencimiento': new Date(item.fechaV).toLocaleDateString('es-AR'),
-    }));
+    const dataFilas = existencias.map((item) => {
+      // Priorizamos minúscula, luego mayúscula, sino 'Sin nombre'
+      const nombreProducto = item.producto?.nombre || item.Producto?.nombre || 'Sin nombre';
+      const nombreReparto = item.reparto?.nombre || item.Reparto?.nombre || 'Sin asignar';
+
+      return {
+        'ID Lote': item.id,
+        'Producto': nombreProducto,
+        'Reparto': nombreReparto,
+        'Cantidad': item.cantidad,
+        // Usamos UTC para evitar que el Excel reste 1 día por la zona horaria de Argentina
+        'F. Elaboración': item.fechaE ? new Date(item.fechaE).toLocaleDateString('es-AR', { timeZone: 'UTC' }) : '-',
+        'F. Vencimiento': item.fechaV ? new Date(item.fechaV).toLocaleDateString('es-AR', { timeZone: 'UTC' }) : '-',
+      };
+    });
 
     // Generamos hoja de cálculo
     const ws = XLSX.utils.json_to_sheet(dataFilas);
