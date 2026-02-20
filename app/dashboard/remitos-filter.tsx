@@ -56,23 +56,22 @@ export function RemitosFilter() {
     router.replace('/dashboard');
   }
 
-  // Chequeamos si hay algún filtro activo
   const hayFiltros = searchParams.get('clienteId') || 
                      searchParams.get('repartoId') || 
                      searchParams.get('fechaDesde') ||
                      searchParams.get('fechaHasta');
 
   return (
-    <div className="flex flex-wrap gap-4 mb-6 p-4 bg-white rounded-lg border shadow-sm items-end">
+    <div className="flex flex-wrap gap-3 items-end">
       
       {/* Filtro Cliente */}
-      <div className="w-[200px]">
-        <label className="text-sm font-medium mb-1 block">Cliente</label>
+      <div className="w-[180px]">
+        <label className="text-xs font-medium mb-1 block text-gray-600">Cliente</label>
         <Select 
           value={searchParams.get('clienteId') || ''} 
           onValueChange={(val) => handleFilterChange('clienteId', val)}
         >
-          <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+          <SelectTrigger className="h-9"><SelectValue placeholder="Todos" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             {clientes.map(c => (
@@ -83,13 +82,13 @@ export function RemitosFilter() {
       </div>
 
       {/* Filtro Reparto */}
-      <div className="w-[200px]">
-        <label className="text-sm font-medium mb-1 block">Reparto</label>
+      <div className="w-[180px]">
+        <label className="text-xs font-medium mb-1 block text-gray-600">Reparto</label>
         <Select 
           value={searchParams.get('repartoId') || ''} 
           onValueChange={(val) => handleFilterChange('repartoId', val)}
         >
-          <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+          <SelectTrigger className="h-9"><SelectValue placeholder="Todos" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             {repartos.map(r => (
@@ -100,20 +99,22 @@ export function RemitosFilter() {
       </div>
 
       {/* Filtro Fecha Desde */}
-      <div className="w-[150px]">
-        <label className="text-sm font-medium mb-1 block">Fecha Desde</label>
+      <div className="w-[140px]">
+        <label className="text-xs font-medium mb-1 block text-gray-600">Fecha Desde</label>
         <Input 
           type="date" 
+          className="h-9"
           value={searchParams.get('fechaDesde') || ''}
           onChange={(e) => handleFilterChange('fechaDesde', e.target.value)}
         />
       </div>
 
       {/* Filtro Fecha Hasta */}
-      <div className="w-[150px]">
-        <label className="text-sm font-medium mb-1 block">Fecha Hasta</label>
+      <div className="w-[140px]">
+        <label className="text-xs font-medium mb-1 block text-gray-600">Fecha Hasta</label>
         <Input 
           type="date" 
+          className="h-9"
           value={searchParams.get('fechaHasta') || ''}
           onChange={(e) => handleFilterChange('fechaHasta', e.target.value)}
         />
@@ -121,7 +122,12 @@ export function RemitosFilter() {
 
       {/* Botón Limpiar */}
       {hayFiltros && (
-        <Button variant="ghost" size="icon" onClick={limpiarFiltros} className="mb-0.5 text-red-500 hover:text-red-700 hover:bg-red-50">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={limpiarFiltros} 
+          className="h-9 w-9 text-red-500 hover:text-red-700 hover:bg-red-50"
+        >
           <X className="h-4 w-4" />
         </Button>
       )}
